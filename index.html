@@ -110,6 +110,27 @@ details.card[open] summary{margin-bottom:6px}
     <span class="sub" id="ph-note"></span>
   </div>
 
+  <section class="backup">
+    <h3>Сохранить отметки</h3>
+    <p class="note" id="bk-status">Отметки живут только в этом телефоне. Раз в неделю жми "Скопировать" и кидай в "Избранное" в ТГ.</p>
+    <div class="btns">
+      <button class="bk" id="bk-copy" type="button">Скопировать</button>
+      <button class="bk alt" id="bk-save" type="button">Файлом</button>
+    </div>
+    <details><summary>Восстановить</summary>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <textarea id="bk-paste" placeholder="Вставь сюда скопированную копию"></textarea>
+        <div class="btns">
+          <button class="bk" id="bk-restore" type="button">Восстановить из текста</button>
+          <label class="bk" for="bk-file">Из файла</label>
+          <input type="file" id="bk-file" accept=".json,.txt,application/json,text/plain" hidden>
+        </div>
+      </div>
+    </details>
+    <details><summary>Яндекс Диск</summary><div class="ydsync-box" style="margin-top:8px"></div></details>
+    <details><summary>Телеграм-бот</summary><div class="tgbk-box" style="margin-top:8px"></div></details>
+  </section>
+
   <details class="card swap" open>
     <summary>Что поменять в уходе</summary>
     <p><b>Сейчас на коже:</b> мелкие красные прыщики, в основном на лбу, на щеках лёгкое покраснение и неровный рельеф. Это не страшно и хорошо откликается на мягкий уход.</p>
@@ -218,28 +239,6 @@ details.card[open] summary{margin-bottom:6px}
     </ul>
     <p>Важно: у иконки и у Safari память отдельная. Поставь иконку сразу и отмечай галочки уже в ней, иначе отметки из Safari туда не попадут (перенести можно через "Скопировать копию").</p>
   </details>
-
-  <section class="backup">
-    <h3>Сохранить отметки</h3>
-    <p class="note" id="bk-status">Галочки и вписанные средства хранятся только в этом телефоне. Если удалить иконку или почистить Safari, они пропадут. Раз в неделю делай копию.</p>
-    <div class="btns">
-      <button class="bk" id="bk-copy" type="button">Скопировать копию</button>
-      <button class="bk alt" id="bk-save" type="button">Скачать файлом</button>
-    </div>
-    <p class="note">Проще всего: нажми "Скопировать копию" и вставь в Телеграм в "Избранное".</p>
-    <details><summary>Восстановить</summary>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
-        <textarea id="bk-paste" placeholder="Вставь сюда скопированную копию"></textarea>
-        <div class="btns">
-          <button class="bk" id="bk-restore" type="button">Восстановить из текста</button>
-          <label class="bk" for="bk-file">Из файла</label>
-          <input type="file" id="bk-file" accept=".json,.txt,application/json,text/plain" hidden>
-        </div>
-      </div>
-    </details>
-    <details><summary>Автоматически на Яндекс Диск</summary><div class="ydsync-box" style="margin-top:8px"></div></details>
-    <details><summary>Автокопии в Телеграм</summary><div class="tgbk-box" style="margin-top:8px"></div></details>
-  </section>
 
   <div class="btns">
     <button class="reset" id="reset" type="button">Снять галочки за сегодня</button>
@@ -352,7 +351,7 @@ details.card[open] summary{margin-bottom:6px}
   // резервные копии
   (function(){
     const st=document.getElementById("bk-status");
-    function stamp(){const d=get("lastBackup",null); if(d) st.textContent="Последняя копия: "+new Date(d).toLocaleDateString("ru-RU",{day:"numeric",month:"long"})+". Делай новую раз в неделю.";}
+    function stamp(){const d=get("lastBackup",null); if(d) st.textContent="Последняя копия: "+new Date(d).toLocaleDateString("ru-RU",{day:"numeric",month:"long"})+". Следующую через неделю.";}
     function collect(){const data={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(PREFIX)&&k!==PREFIX+"lastBackup")data[k]=localStorage.getItem(k);}}catch(e){}return data;}
     function pack(){return JSON.stringify({app:"asya-uhod",v:1,saved:new Date().toISOString(),data:collect()});}
     function done(){put("lastBackup",new Date().toISOString());stamp();}
@@ -368,7 +367,7 @@ details.card[open] summary{margin-bottom:6px}
       const ok=()=>{done();st.textContent="Скопировано. Вставь в Телеграм в \"Избранное\".";};
       if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok,()=>fallback(t,ok)); else fallback(t,ok);
     });
-    function fallback(t,ok){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok();}catch(e){st.textContent="Не скопировалось, попробуй \"Скачать файлом\".";}a.remove();}
+    function fallback(t,ok){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok();}catch(e){st.textContent="Не скопировалось, попробуй \"Файлом\".";}a.remove();}
     document.getElementById("bk-save").addEventListener("click",()=>{
       const blob=new Blob([pack()],{type:"application/json"}), a=document.createElement("a");
       a.href=URL.createObjectURL(blob); a.download="uhod-asya-"+today+".json";
