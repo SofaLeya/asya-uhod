@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Уход за кожей 🍍</title>
+<meta name="theme-color" content="#0c0b06">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Уход">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Unbounded:wght@500&display=swap">
+<style>
+:root{
+  --bg:#0c0b06; --surface:#18160c; --fg:#fbf6df; --muted:#b0a77c; --line:#302b16;
+  --accent:#ffd84a; --leaf:#a9e05c; --accent-soft:#2b2610; --warn:#ff9f6b; --warn-soft:#3a2216;
+  --grad:linear-gradient(135deg,#ffe45c 0%,#ffcb3a 50%,#a9e05c 100%);
+  --grad-soft:linear-gradient(135deg,#3b3410 0%,#22200c 60%,#15140a 100%);
+  --display:"Unbounded", system-ui, sans-serif; --body:"Golos Text", system-ui, sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(130% 55% at 50% -8%,#4a420f 0%,#211e0b 38%,var(--bg) 72%) fixed,var(--bg);min-height:100vh;color:var(--fg);font:16px/1.5 var(--body);padding:calc(24px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom))}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+header{display:flex;flex-direction:column;gap:4px}
+h1{font:500 1.7rem/1.2 var(--display);margin:0;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.date{color:var(--muted);font-size:.95rem}
+.phase{background:var(--grad-soft);border:1px solid #4d4412;border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.phase .big{font-weight:600}
+.phase .sub{opacity:.85;font-size:.92rem}
+section{display:flex;flex-direction:column;gap:10px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+h2{font:500 1.2rem/1.2 var(--display);margin:0}
+.count{font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.count.done{color:var(--accent);font-weight:600}
+ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+ol li:not([hidden]) ~ li:not([hidden]){border-top:1px solid var(--line)}
+.step{display:grid;grid-template-columns:26px 1fr;gap:12px;padding:14px 16px;cursor:pointer;align-items:start}
+.step input[type=checkbox]{appearance:none;-webkit-appearance:none;width:24px;height:24px;margin:1px 0 0;border:2px solid var(--muted);border-radius:7px;display:grid;place-content:center;cursor:pointer;background:var(--surface)}
+.step input[type=checkbox]::after{content:"";width:12px;height:7px;border-left:2.5px solid #1a1606;border-bottom:2.5px solid #1a1606;transform:rotate(-45deg) translate(1px,-1px);opacity:0}
+.step input[type=checkbox]:checked{background:var(--grad);border-color:transparent}
+.step input[type=checkbox]:checked::after{opacity:1}
+.txt{min-width:0;display:flex;flex-direction:column;gap:2px}
+.name{font-weight:600}
+.prod{font-size:.85rem;color:var(--accent)}
+.prod.empty{color:var(--muted);font-style:italic}
+.step input:checked + .txt .name{text-decoration:line-through;color:var(--muted)}
+.tag{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:999px;background:var(--warn-soft);color:var(--warn);margin-left:6px;vertical-align:2px}
+.more{align-self:flex-start;margin-top:4px;background:none;border:0;padding:2px 0;font:inherit;font-size:.82rem;font-weight:600;color:var(--accent);cursor:pointer}
+.more::after{content:" ▾"}
+.more[aria-expanded="true"]::after{content:" ▴"}
+.fold{display:none;flex-direction:column;gap:6px;margin-top:6px;font-size:.86rem;color:var(--muted)}
+.open .fold{display:flex}
+.fold b{color:var(--fg);font-weight:600}
+.fold ul{margin:0;padding-left:18px}
+.mine{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.mine input{font:inherit;font-size:.9rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+.mine input:focus{outline:2px solid var(--accent);border-color:transparent}
+.rest{opacity:.55}
+.rest .step{cursor:default}
+.rest input[type=checkbox]{border-style:dashed}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.card h3{margin:0;font-size:1rem;font-weight:600}
+.card p{margin:0;font-size:.9rem;color:var(--muted)}
+.card ul{margin:0;padding-left:18px;font-size:.9rem;color:var(--muted);display:flex;flex-direction:column;gap:5px}
+.card ul b{color:var(--fg);font-weight:600}
+.card.alert{border-color:#5a3a1c;background:linear-gradient(135deg,#2c1a0e,#18140b)}
+.card.alert h3{color:var(--warn)}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cal-head h3{text-align:center;flex:1}
+.cal-nav{background:none;border:1px solid var(--line);color:var(--fg);font:inherit;font-size:1.1rem;width:34px;height:34px;border-radius:10px;cursor:pointer}
+.cal-nav:disabled{opacity:.3;cursor:default}
+.cal-wd,.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.cal-wd span{font-size:.72rem;color:var(--muted)}
+.day{display:flex;justify-content:center}
+.dot{width:100%;max-width:36px;aspect-ratio:1;border-radius:50%;border:1.5px solid var(--line);display:grid;place-content:center;font-size:.8rem;font-variant-numeric:tabular-nums}
+.dot.on{background:var(--grad);border-color:transparent;color:#1a1606;font-weight:600}
+.day.past{cursor:pointer}
+.day.future .dot{opacity:.35;border-style:dashed}
+.day.today .dot{outline:2px solid var(--fg);outline-offset:2px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.reset{background:none;border:1px solid var(--line);color:var(--muted);font:inherit;font-size:.85rem;padding:7px 12px;border-radius:8px;cursor:pointer}
+details.card summary{cursor:pointer;font-weight:600}
+details.card[open] summary{margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Уход за кожей 🍍</h1>
+    <div class="date" id="date"></div>
+  </header>
+
+  <div class="phase">
+    <span class="big" id="ph-title"></span>
+    <span class="sub" id="ph-note"></span>
+  </div>
+
+  <section>
+    <div class="sec-head"><h2>Утро</h2><span class="count" id="c-am"></span></div>
+    <ol>
+      <li><label class="step"><input type="checkbox" id="am-wash" data-g="am"><span class="txt"><span class="name">Умыться</span><span class="prod" data-p="cleanser"></span>
+        <span class="fold"><span>Тёплой, не горячей водой. Если кожа сильно стянута, утром можно просто водой, без геля.</span>
+        <span>Твой гель с гиалуронкой подходит. Если после него кожа "скрипит" и стягивает, замени на совсем мягкий, например CeraVe увлажняющий очищающий или Bioderma Sensibio гель.</span>
+        <span>Полотенце для лица отдельное, промокнуть, не тереть.</span></span></span></label></li>
+      <li><label class="step"><input type="checkbox" id="am-tonic" data-g="am" data-opt="1"><span class="txt"><span class="name">Тоник <span class="tag">необяз.</span></span><span class="prod" data-p="tonic"></span>
+        <span class="fold"><span>Ладонями, похлопать, без ватного диска. Если щиплет или кожа краснеет, пропусти.</span></span></span></label></li>
+      <li><label class="step"><input type="checkbox" id="am-cream" data-g="am"><span class="txt"><span class="name">Крем на всё лицо</span><span class="prod" data-p="creamAm"></span>
+        <span class="fold"><span>На чуть влажную кожу, сразу после умывания. Твой крем с витамином С утром можно оставить.</span>
+        <span>Если с ним щиплет или облазит сильнее, утром тоже мажь вечерний крем с церамидами.</span></span></span></label></li>
+      <li><label class="step"><input type="checkbox" id="am-spf" data-g="am" data-opt="1"><span class="txt"><span class="name">SPF, если на улицу <span class="tag">необяз.</span></span><span class="prod" data-p="spf"></span>
+        <span class="fold"><span>Зимой хватит SPF 30, весной и летом 50. Защищает от тёмных пятен после прыщей.</span>
+        <span>Лёгкий флюид, чтобы не забивал поры. Например Skin1004 Air-Fit, La Roche-Posay Anthelios.</span></span></span></label></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="sec-head"><h2>Вечер</h2><span class="count" id="c-pm"></span></div>
+    <ol>
+      <li><label class="step"><input type="checkbox" id="pm-micellar" data-g="pm" data-opt="1"><span class="txt"><span class="name">Мицеллярка, если был макияж или SPF <span class="tag">необяз.</span></span><span class="prod" data-p="micellar"></span>
+        <span class="fold"><span>Прижать диск на 10 секунд и снять, не тереть. Потом всё равно умыться.</span></span></span></label></li>
+      <li><label class="step"><input type="checkbox" id="pm-wash" data-g="pm"><span class="txt"><span class="name">Умыться</span><span class="prod" data-p="cleanser"></span>
+        <span class="fold"><span>Тот же мягкий гель, что утром. Промокнуть и подождать пару минут, пока кожа полностью высохнет.</span></span></span></label></li>
+      <li id="az-li"><label class="step"><input type="checkbox" id="pm-az" data-g="pm"><span class="txt"><span class="name" id="az-name">Азелаиновая кислота</span><span class="prod" data-p="azelaic"></span><span class="prod empty" id="az-status"></span>
+        <span class="fold"><span>Лечит прыщи и красные следы, но мягче других средств, поэтому подходит, когда кожа и сыпется, и шелушится.</span>
+        <span><b>Где купить:</b> в аптеке без рецепта, гель 15%: Азелик, Скинорен гель, Азикс-Дерм (крем 20%, чуть суше).</span>
+        <span><b>Как:</b> горошина на всё лицо тонким слоем. Мимо глаз, губ, крыльев носа. <b>За ухом и на шее не мазать.</b></span>
+        <span>Первые дни может пощипывать, это нормально. Если жжёт сильно или кожа красная, пропусти пару дней и мажь только крем.</span></span></span></label></li>
+      <li><label class="step"><input type="checkbox" id="pm-cream" data-g="pm"><span class="txt"><span class="name">Восстанавливающий крем</span><span class="prod" data-p="creamPm"></span>
+        <span class="fold"><span>Через 5-10 минут после азелаинки, когда впиталась. Это главный шаг против шелушения, его стоит купить.</span>
+        <span><b>Ищи в составе:</b> церамиды, пантенол, глицерин, на упаковке "некомедогенно". Без витамина С и кислот.</span>
+        <span><b>Например:</b> Librederm Cerafavit, CeraVe увлажняющий лосьон для лица, La Roche-Posay Toleriane.</span>
+        <span>Если какие-то места сильно шелушатся, сверху точечно плотный крем: La Roche-Posay Cicaplast Baume B5 или Бепантен.</span></span></span></label></li>
+      <li><label class="step"><input type="checkbox" id="pm-ear" data-g="pm" data-opt="1"><span class="txt"><span class="name">За ухом, если сухо <span class="tag">необяз.</span></span><span class="prod" data-p="ear"></span>
+        <span class="fold"><span>Только плотный крем без отдушки: Cicaplast Baume B5, Бепантен, обычный вазелин. Никаких кислот и средств от прыщей.</span>
+        <span>Если появились красные бляшки с серебристыми чешуйками или чешется, это не про уход, а к дерматологу (см. ниже).</span></span></span></label></li>
+    </ol>
+  </section>
+
+  <div class="card">
+    <div class="cal-head">
+      <button type="button" class="cal-nav" id="cal-prev" aria-label="Предыдущий месяц">‹</button>
+      <h3 id="cal-title">Азелаинка</h3>
+      <button type="button" class="cal-nav" id="cal-next" aria-label="Следующий месяц">›</button>
+    </div>
+    <div class="cal-wd"><span>пн</span><span>вт</span><span>ср</span><span>чт</span><span>пт</span><span>сб</span><span>вс</span></div>
+    <div class="days" id="days"></div>
+    <p>Закрашен день, когда была азелаинка. Забыла отметить вчера? Нажми на день.</p>
+  </div>
+
+  <div class="card">
+    <h3>Главные правила</h3>
+    <ul>
+      <li><b>Пока убрать:</b> скрабы, кислотные пилинги, спиртовые лосьоны, зубную пасту на прыщи. Они сушат, и кожа облазит ещё сильнее.</li>
+      <li><b>Акридерм на лицо не мазать.</b> В нём гормон (бетаметазон). На лице он сам может вызывать прыщи, шелушение и истончение кожи, а после отмены кожа часто обсыпает сильнее. На воспалённый прыщ лучше точечно азелаинку.</li>
+      <li><b>Прыщи не давить</b>, иначе останутся пятна и ямки.</li>
+      <li><b>Новые средства по одному</b>, раз в неделю-две. Сначала пробник на шее сбоку, не за ухом.</li>
+      <li>Наволочку менять раз в 2-3 дня, телефон протирать.</li>
+      <li>Результат видно через 1-2 месяца, первые недели может быть даже чуть хуже.</li>
+      <li>Галочки сбрасываются каждый день в 5 утра.</li>
+    </ul>
+  </div>
+
+  <div class="card alert">
+    <h3>Когда к дерматологу</h3>
+    <ul>
+      <li><b>Красные шелушащиеся пятна</b> у крыльев носа, у бровей, по линии роста волос или за ушами. Это может быть себорейный дерматит или тот же псориаз, кремы для прыщей тут не помогут, нужна мазь от врача.</li>
+      <li>За ухом снова вылезло, или пятна появились в новых местах.</li>
+      <li>Глубокие болезненные шишки, которые оставляют следы.</li>
+      <li>Акридерм мазала на лицо часто, и после отмены кожу сильно обсыпало или она краснеет.</li>
+      <li>Через 2-3 месяца без улучшения.</li>
+    </ul>
+    <p>Дерматолог по ОМС бесплатно, по направлению терапевта.</p>
+  </div>
+
+  <details class="card">
+    <summary>Как сделать иконкой на iPhone</summary>
+    <ul>
+      <li>Открыть эту страницу в Safari.</li>
+      <li>Нажать "Поделиться" (квадрат со стрелкой вверх).</li>
+      <li>Выбрать "На экран "Домой"" и нажать "Добавить".</li>
+    </ul>
+    <p>Галочки и вписанные средства хранятся только на этом телефоне.</p>
+  </details>
+
+  <div class="btns">
+    <button class="reset" id="reset" type="button">Снять галочки за сегодня</button>
+    <button class="reset" id="restart" type="button">Начать заново</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const PREFIX="ananas:", SHIFT=5*3600*1000, DAY=86400000;
+  const HINT={cleanser:"Впиши свой гель",tonic:"Впиши свой тоник",creamAm:"Впиши свой крем",creamPm:"Купить крем с церамидами, впиши",spf:"Впиши свой SPF",micellar:"Впиши свою мицеллярку",azelaic:"Купить азелаинку, впиши",ear:"Впиши свой крем"};
+  const DEF={cleanser:"Aravia Hyaluronic Cleansing Gel",tonic:"Aravia Vita Glow Tonic",creamAm:"Aravia Vitamin-C Power Radiance Cream"};
+  function dayKey(t){const x=new Date(t-SHIFT);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0");}
+  function get(k,d){try{const v=JSON.parse(localStorage.getItem(PREFIX+k));return v==null?d:v;}catch(e){return d;}}
+  function put(k,v){try{localStorage.setItem(PREFIX+k,JSON.stringify(v));}catch(e){}}
+  function del(k){try{localStorage.removeItem(PREFIX+k);}catch(e){}}
+  const between=(a,b)=>Math.round((Date.parse(b)-Date.parse(a))/DAY);
+
+  let today=dayKey(Date.now()), state=get(today,{}), calOffset=0;
+  const boxes=[...document.querySelectorAll(".step input[type=checkbox]")];
+  const prods=Object.assign({},DEF,get("prod",{}));
+
+  // свои средства: поле в раскрывашке
+  document.querySelectorAll("label.step").forEach(lab=>{
+    const txt=lab.querySelector(".txt"), fold=lab.querySelector(".fold"), pr=lab.querySelector(".prod[data-p]");
+    const btn=document.createElement("button");
+    btn.type="button"; btn.className="more"; btn.textContent="Подробнее"; btn.setAttribute("aria-expanded","false");
+    btn.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();const o=lab.classList.toggle("open");btn.setAttribute("aria-expanded",String(o));});
+    fold.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();});
+    if(pr){
+      const key=pr.dataset.p, box=document.createElement("span"); box.className="mine";
+      box.innerHTML='<b>Моё средство:</b><input type="text" placeholder="название">';
+      const inp=box.querySelector("input"); inp.value=prods[key]||"";
+      inp.addEventListener("input",()=>{prods[key]=inp.value.trim();put("prod",prods);paintProds();});
+      inp.addEventListener("click",e=>e.stopPropagation());
+      fold.append(box);
+    }
+    txt.insertBefore(btn,fold);
+  });
+  function paintProds(){
+    document.querySelectorAll(".prod[data-p]").forEach(el=>{
+      const v=prods[el.dataset.p]; el.textContent=v||HINT[el.dataset.p]+" в \"Подробнее\""; el.classList.toggle("empty",!v);
+    });
+    document.querySelectorAll(".mine input").forEach(i=>{const k=i.closest("label").querySelector(".prod[data-p]").dataset.p; if(document.activeElement!==i) i.value=prods[k]||"";});
+  }
+
+  function render(){
+    document.getElementById("date").textContent=new Date(Date.now()-SHIFT).toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"});
+    let start=get("start",null);
+    const n=start?between(start,today)+1:0;
+    const yAz=!!get(dayKey(Date.now()-DAY),{})["pm-az"];
+    let azState="on"; // on | rest | early
+    const T=document.getElementById("ph-title"), N=document.getElementById("ph-note");
+    if(!start){T.textContent="Старт: неделя только базы";N.textContent="Умыться, крем, SPF. Кожа успокоится, и через неделю подключим азелаинку.";azState="early";}
+    else if(n<=7){T.textContent="День "+n+" · только база";N.textContent="Пока без азелаинки, даём коже перестать облазить. Она подключится через "+(8-n)+" "+(8-n===1?"день":(8-n)<5?"дня":"дней")+".";azState="early";}
+    else if(n<=28){const rest=yAz&&!state["pm-az"];azState=rest?"rest":"on";T.textContent="День "+n+" · азелаинка через день";N.textContent=rest?"Вчера была азелаинка, сегодня вечером только крем.":"Сегодня вечером азелаинка.";}
+    else{T.textContent="День "+n+" · кожа привыкла";N.textContent="Азелаинка каждый вечер. Если шелушится, вернись на через день.";}
+
+    const azLi=document.getElementById("az-li"), az=document.getElementById("pm-az");
+    azLi.classList.toggle("rest",azState!=="on"); az.disabled=azState!=="on";
+    document.getElementById("az-name").textContent=azState==="early"?"Азелаиновая кислота: позже":azState==="rest"?"Азелаиновая кислота: сегодня отдых":"Азелаиновая кислота";
+    document.getElementById("az-status").textContent=azState==="early"?"Первая неделя без неё. Можно уже купить.":"";
+    document.getElementById("az-status").hidden=azState!=="early";
+
+    boxes.forEach(b=>b.checked=!!state[b.id]);
+    ["am","pm"].forEach(g=>{
+      const req=boxes.filter(b=>b.dataset.g===g&&!b.dataset.opt&&!b.disabled);
+      const k=req.filter(b=>b.checked).length, el=document.getElementById("c-"+g);
+      el.textContent=k===req.length?"готово":k+" из "+req.length; el.classList.toggle("done",k===req.length);
+    });
+
+    // календарь
+    const wrap=document.getElementById("days"); wrap.innerHTML="";
+    const now=new Date(Date.now()-SHIFT), vm=new Date(now.getFullYear(),now.getMonth()+calOffset,1);
+    const t=vm.toLocaleDateString("ru-RU",{month:"long",year:"numeric"}).replace(" г.","");
+    document.getElementById("cal-title").textContent="Азелаинка · "+t.charAt(0).toUpperCase()+t.slice(1);
+    document.getElementById("cal-next").disabled=calOffset>=0;
+    const lead=(vm.getDay()+6)%7, dim=new Date(vm.getFullYear(),vm.getMonth()+1,0).getDate();
+    for(let i=0;i<lead;i++) wrap.appendChild(document.createElement("div"));
+    for(let d=1;d<=dim;d++){
+      const k=vm.getFullYear()+"-"+String(vm.getMonth()+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+      const isT=k===today, isF=k>today, on=!!(isT?state["pm-az"]:(!isF&&get(k,{})["pm-az"]));
+      const el=document.createElement("div"); el.className="day"+(isT?" today":"")+(isF?" future":"");
+      el.innerHTML='<span class="dot'+(on?" on":"")+'">'+d+'</span>';
+      if(!isT&&!isF){el.classList.add("past");el.addEventListener("click",()=>{const s=get(k,{});s["pm-az"]=!s["pm-az"];put(k,s);render();});}
+      wrap.appendChild(el);
+    }
+    paintProds();
+  }
+
+  function sync(){const k=dayKey(Date.now());if(k!==today){today=k;state=get(k,{});}}
+  boxes.forEach(b=>b.addEventListener("change",()=>{
+    sync(); state[b.id]=b.checked; put(today,state);
+    if(b.checked&&!get("start",null)) put("start",today);
+    render();
+  }));
+  document.getElementById("cal-prev").onclick=()=>{calOffset--;render();};
+  document.getElementById("cal-next").onclick=()=>{if(calOffset<0){calOffset++;render();}};
+  document.getElementById("reset").onclick=()=>{state={};put(today,state);render();};
+  const rs=document.getElementById("restart");
+  rs.onclick=()=>{
+    if(rs.dataset.armed){del("start");delete rs.dataset.armed;rs.textContent="Начать заново";render();return;}
+    rs.dataset.armed="1";rs.textContent="Точно? Нажми ещё раз";
+    setTimeout(()=>{delete rs.dataset.armed;rs.textContent="Начать заново";},4000);
+  };
+  document.addEventListener("visibilitychange",()=>{sync();render();});
+  render();
+})();
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){})}</script>
+</body>
+</html>
