@@ -83,6 +83,13 @@ ol li:not([hidden]) ~ li:not([hidden]){border-top:1px solid var(--line)}
 .day.today .dot{outline:2px solid var(--fg);outline-offset:2px}
 .btns{display:flex;flex-wrap:wrap;gap:8px}
 .reset{background:none;border:1px solid var(--line);color:var(--muted);font:inherit;font-size:.85rem;padding:7px 12px;border-radius:8px;cursor:pointer}
+.backup{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.backup h3{margin:0;font-size:1rem;font-weight:600}
+.backup .note{margin:0;font-size:.88rem;color:var(--muted)}
+.backup details summary{cursor:pointer;color:var(--accent);font-weight:600}
+.bk{background:var(--grad);color:#1a1606;border:0;font:inherit;font-size:.9rem;font-weight:600;padding:8px 14px;border-radius:10px;cursor:pointer}
+label.bk,.bk.alt{background:none;color:var(--accent);border:1.5px solid var(--accent)}
+#bk-paste{font:inherit;font-size:.85rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;width:100%;min-height:70px}
 details.card summary{cursor:pointer;font-weight:600}
 .swap summary{font:500 1.05rem/1.3 var(--display);color:var(--accent)}
 .swap h4{margin:6px 0 0;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase}
@@ -209,8 +216,30 @@ details.card[open] summary{margin-bottom:6px}
       <li>Нажать "Поделиться" (квадрат со стрелкой вверх).</li>
       <li>Выбрать "На экран "Домой"" и нажать "Добавить".</li>
     </ul>
-    <p>Галочки и вписанные средства хранятся только на этом телефоне.</p>
+    <p>Важно: у иконки и у Safari память отдельная. Поставь иконку сразу и отмечай галочки уже в ней, иначе отметки из Safari туда не попадут (перенести можно через "Скопировать копию").</p>
   </details>
+
+  <section class="backup">
+    <h3>Сохранить отметки</h3>
+    <p class="note" id="bk-status">Галочки и вписанные средства хранятся только в этом телефоне. Если удалить иконку или почистить Safari, они пропадут. Раз в неделю делай копию.</p>
+    <div class="btns">
+      <button class="bk" id="bk-copy" type="button">Скопировать копию</button>
+      <button class="bk alt" id="bk-save" type="button">Скачать файлом</button>
+    </div>
+    <p class="note">Проще всего: нажми "Скопировать копию" и вставь в Телеграм в "Избранное".</p>
+    <details><summary>Восстановить</summary>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <textarea id="bk-paste" placeholder="Вставь сюда скопированную копию"></textarea>
+        <div class="btns">
+          <button class="bk" id="bk-restore" type="button">Восстановить из текста</button>
+          <label class="bk" for="bk-file">Из файла</label>
+          <input type="file" id="bk-file" accept=".json,.txt,application/json,text/plain" hidden>
+        </div>
+      </div>
+    </details>
+    <details><summary>Автоматически на Яндекс Диск</summary><div class="ydsync-box" style="margin-top:8px"></div></details>
+    <details><summary>Автокопии в Телеграм</summary><div class="tgbk-box" style="margin-top:8px"></div></details>
+  </section>
 
   <div class="btns">
     <button class="reset" id="reset" type="button">Снять галочки за сегодня</button>
@@ -218,6 +247,8 @@ details.card[open] summary{margin-bottom:6px}
   </div>
 </div>
 
+<script src="tgbk.js"></script>
+<script src="ydsync.js"></script>
 <script>
 (function(){
   const PREFIX="ananas:", SHIFT=5*3600*1000, DAY=86400000;
@@ -317,6 +348,38 @@ details.card[open] summary{margin-bottom:6px}
     setTimeout(()=>{delete rs.dataset.armed;rs.textContent="Начать заново";},4000);
   };
   document.addEventListener("visibilitychange",()=>{sync();render();});
+
+  // резервные копии
+  (function(){
+    const st=document.getElementById("bk-status");
+    function stamp(){const d=get("lastBackup",null); if(d) st.textContent="Последняя копия: "+new Date(d).toLocaleDateString("ru-RU",{day:"numeric",month:"long"})+". Делай новую раз в неделю.";}
+    function collect(){const data={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(PREFIX)&&k!==PREFIX+"lastBackup")data[k]=localStorage.getItem(k);}}catch(e){}return data;}
+    function pack(){return JSON.stringify({app:"asya-uhod",v:1,saved:new Date().toISOString(),data:collect()});}
+    function done(){put("lastBackup",new Date().toISOString());stamp();}
+    function restore(text){
+      try{const j=JSON.parse(text.trim());if(j.app!=="asya-uhod"||!j.data)throw 0;
+        Object.entries(j.data).forEach(([k,v])=>{if(k.startsWith(PREFIX))localStorage.setItem(k,v);});
+        Object.assign(prods,DEF,get("prod",{})); state=get(today,{}); render();
+        st.textContent="Готово, всё восстановлено.";
+      }catch(e){st.textContent="Не получилось. Нужна копия именно с этой странички, целиком.";}
+    }
+    document.getElementById("bk-copy").addEventListener("click",()=>{
+      const t=pack();
+      const ok=()=>{done();st.textContent="Скопировано. Вставь в Телеграм в \"Избранное\".";};
+      if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok,()=>fallback(t,ok)); else fallback(t,ok);
+    });
+    function fallback(t,ok){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok();}catch(e){st.textContent="Не скопировалось, попробуй \"Скачать файлом\".";}a.remove();}
+    document.getElementById("bk-save").addEventListener("click",()=>{
+      const blob=new Blob([pack()],{type:"application/json"}), a=document.createElement("a");
+      a.href=URL.createObjectURL(blob); a.download="uhod-asya-"+today+".json";
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); done();
+    });
+    document.getElementById("bk-restore").addEventListener("click",()=>restore(document.getElementById("bk-paste").value));
+    document.getElementById("bk-file").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{restore(r.result);e.target.value="";};r.readAsText(f);});
+    try{ if(window.YDS) YDS.init({app:"asya-uhod",title:"Уход Аси",cid:"02760b58a041462481b0b3fd09c33d7b",redir:"https://sofaleya.github.io/asya-uhod/",prefix:PREFIX,exclude:[PREFIX+"lastBackup"],accent:"#ffd84a",accentText:"#1a1606"}); }catch(e){}
+    try{ if(window.TGBK) TGBK.init({app:"asya-uhod",title:"Уход",accent:"var(--accent)",accentText:"#1a1606",file:d=>"uhod-asya-"+d+".json",data:()=>{const d=collect();return Object.keys(d).length?JSON.stringify({app:"asya-uhod",v:1,data:d}):"";}}); }catch(e){}
+    stamp();
+  })();
   render();
 })();
 </script>
