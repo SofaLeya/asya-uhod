@@ -112,11 +112,12 @@ details.card[open] summary{margin-bottom:6px}
 
   <section class="backup">
     <h3>Сохранить отметки</h3>
-    <p class="note" id="bk-status">Отметки живут только в этом телефоне. Раз в неделю жми "Скопировать" и кидай в "Избранное" в ТГ.</p>
+    <p class="note" id="bk-status"></p>
     <div class="btns">
       <button class="bk" id="bk-copy" type="button">Скопировать</button>
       <button class="bk alt" id="bk-save" type="button">Файлом</button>
     </div>
+    <details id="yd-det"><summary>Яндекс Диск</summary><div class="ydsync-box" style="margin-top:8px"></div></details>
     <details><summary>Восстановить</summary>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
         <textarea id="bk-paste" placeholder="Вставь сюда скопированную копию"></textarea>
@@ -127,7 +128,6 @@ details.card[open] summary{margin-bottom:6px}
         </div>
       </div>
     </details>
-    <details><summary>Яндекс Диск</summary><div class="ydsync-box" style="margin-top:8px"></div></details>
     <details><summary>Телеграм-бот</summary><div class="tgbk-box" style="margin-top:8px"></div></details>
   </section>
 
@@ -351,7 +351,14 @@ details.card[open] summary{margin-bottom:6px}
   // резервные копии
   (function(){
     const st=document.getElementById("bk-status");
-    function stamp(){const d=get("lastBackup",null); if(d) st.textContent="Последняя копия: "+new Date(d).toLocaleDateString("ru-RU",{day:"numeric",month:"long"})+". Следующую через неделю.";}
+    function ydOn(){try{return !!(JSON.parse(localStorage.getItem("yds:asya-uhod")||"{}")||{}).tok;}catch(e){return false;}}
+    function stamp(){
+      if(ydOn()){st.textContent="Яндекс Диск подключён, всё сохраняется само ✓";return;}
+      const d=get("lastBackup",null);
+      st.textContent="Подключи Яндекс Диск, и отметки будут сохраняться сами. Не вышло? Раз в неделю жми \"Скопировать\" и кидай в \"Избранное\" в ТГ."+(d?" Последняя копия: "+new Date(d).toLocaleDateString("ru-RU",{day:"numeric",month:"long"})+".":"");
+    }
+    let hold=0; const msg=t=>{st.textContent=t;hold=Date.now()+8000;};
+    setInterval(()=>{if(Date.now()>hold)stamp();},3000);
     function collect(){const data={};try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(PREFIX)&&k!==PREFIX+"lastBackup")data[k]=localStorage.getItem(k);}}catch(e){}return data;}
     function pack(){return JSON.stringify({app:"asya-uhod",v:1,saved:new Date().toISOString(),data:collect()});}
     function done(){put("lastBackup",new Date().toISOString());stamp();}
@@ -359,15 +366,15 @@ details.card[open] summary{margin-bottom:6px}
       try{const j=JSON.parse(text.trim());if(j.app!=="asya-uhod"||!j.data)throw 0;
         Object.entries(j.data).forEach(([k,v])=>{if(k.startsWith(PREFIX))localStorage.setItem(k,v);});
         Object.assign(prods,DEF,get("prod",{})); state=get(today,{}); render();
-        st.textContent="Готово, всё восстановлено.";
-      }catch(e){st.textContent="Не получилось. Нужна копия именно с этой странички, целиком.";}
+        msg("Готово, всё восстановлено.");
+      }catch(e){msg("Не получилось. Нужна копия именно с этой странички, целиком.");}
     }
     document.getElementById("bk-copy").addEventListener("click",()=>{
       const t=pack();
-      const ok=()=>{done();st.textContent="Скопировано. Вставь в Телеграм в \"Избранное\".";};
+      const ok=()=>{done();msg("Скопировано. Вставь в Телеграм в \"Избранное\".");};
       if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok,()=>fallback(t,ok)); else fallback(t,ok);
     });
-    function fallback(t,ok){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok();}catch(e){st.textContent="Не скопировалось, попробуй \"Файлом\".";}a.remove();}
+    function fallback(t,ok){const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok();}catch(e){msg("Не скопировалось, попробуй \"Файлом\".");}a.remove();}
     document.getElementById("bk-save").addEventListener("click",()=>{
       const blob=new Blob([pack()],{type:"application/json"}), a=document.createElement("a");
       a.href=URL.createObjectURL(blob); a.download="uhod-asya-"+today+".json";
