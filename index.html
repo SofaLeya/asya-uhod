@@ -96,6 +96,14 @@ details.card summary{cursor:pointer;font-weight:600}
 .swap h4.out{color:var(--warn)} .swap h4.keep{color:var(--leaf)} .swap h4.buy{color:var(--accent)}
 .swap p b{color:var(--fg)}
 details.card[open] summary{margin-bottom:6px}
+.gall{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:2px;background:var(--grad);border:2px solid transparent;border-radius:14px;padding:13px 16px;font:inherit;font-size:1rem;font-weight:700;color:#1a1606;cursor:pointer;transition:transform .1s ease;-webkit-tap-highlight-color:transparent}
+.gall:active{transform:scale(.98)}
+.gall .gbox{width:20px;height:20px;flex:none;border-radius:6px;border:2px solid currentColor;display:grid;place-content:center}
+.gall.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.gall.on .gbox{background:var(--accent);border-color:var(--accent)}
+.gall.on .gbox::after{content:"";width:10px;height:6px;border-left:2.5px solid var(--bg);border-bottom:2.5px solid var(--bg);transform:rotate(-45deg) translate(1px,-1px)}
+.gall.mix .gbox::after{content:"";width:10px;height:2.5px;background:currentColor;border-radius:2px}
+.gall:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </style>
 </head>
 <body>
@@ -169,6 +177,7 @@ details.card[open] summary{margin-bottom:6px}
         <span class="fold"><span>Зимой хватит SPF 30, весной и летом 50. Защищает от тёмных пятен после прыщей.</span>
         <span>Лёгкий флюид, чтобы не забивал поры. Например Skin1004 Air-Fit, La Roche-Posay Anthelios.</span></span></span></label></li>
     </ol>
+    <button type="button" class="gall" id="all-am" role="checkbox" aria-checked="false"><span class="gbox"></span><span class="gt"></span></button>
   </section>
 
   <section>
@@ -192,6 +201,7 @@ details.card[open] summary{margin-bottom:6px}
         <span class="fold"><span>Только плотный крем без отдушки: Cicaplast Baume B5, Бепантен, обычный вазелин. Никаких кислот и средств от прыщей.</span>
         <span>Если появились красные бляшки с серебристыми чешуйками или чешется, это не про уход, а к дерматологу (см. ниже).</span></span></span></label></li>
     </ol>
+    <button type="button" class="gall" id="all-pm" role="checkbox" aria-checked="false"><span class="gbox"></span><span class="gt"></span></button>
   </section>
 
   <div class="card">
@@ -310,6 +320,10 @@ details.card[open] summary{margin-bottom:6px}
       const req=boxes.filter(b=>b.dataset.g===g&&!b.dataset.opt&&!b.disabled);
       const k=req.filter(b=>b.checked).length, el=document.getElementById("c-"+g);
       el.textContent=k===req.length?"готово":k+" из "+req.length; el.classList.toggle("done",k===req.length);
+      const gv=boxes.filter(b=>b.dataset.g===g&&!b.closest("li").hidden&&!b.disabled), gk=gv.filter(b=>b.checked).length, gb=document.getElementById("all-"+g);
+      const gon=gv.length>0&&gk===gv.length, gmix=gk>0&&!gon;
+      gb.classList.toggle("on",gon); gb.classList.toggle("mix",gmix); gb.setAttribute("aria-checked",gmix?"mixed":String(gon));
+      gb.querySelector(".gt").textContent=gon?"Готово":"Отметить всё: "+(g==="am"?"утро":"вечер");
     });
 
     // календарь
@@ -337,6 +351,15 @@ details.card[open] summary{margin-bottom:6px}
     if(b.checked&&!get("start",null)) put("start",today);
     render();
   }));
+  ["am","pm"].forEach(g=>{
+    document.getElementById("all-"+g).addEventListener("click",()=>{
+      sync();
+      const vis=boxes.filter(b=>b.dataset.g===g&&!b.closest("li").hidden&&!b.disabled), val=!vis.every(b=>b.checked);
+      vis.forEach(b=>{state[b.id]=val;}); put(today,state);
+      if(val&&!get("start",null)) put("start",today);
+      render();
+    });
+  });
   document.getElementById("cal-prev").onclick=()=>{calOffset--;render();};
   document.getElementById("cal-next").onclick=()=>{if(calOffset<0){calOffset++;render();}};
   document.getElementById("reset").onclick=()=>{state={};put(today,state);render();};
