@@ -27,6 +27,10 @@ test('iPhone layout, Safari installation guidance and standalone display', async
   await page.locator('#product-add').click();
   await expect(page.locator('#product-dialog')).toBeVisible();
   expect(await page.locator('#product-form [name=name]').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(16);
+  await page.addInitScript(() => Object.defineProperty(navigator, 'standalone', {get: () => true}));
+  await page.reload();
+  await page.locator('.bottom-nav [data-tab=more]').click();
+  await expect(page.locator('#ios-install')).toBeHidden();
 });
 
 test('PWA offers a waiting version, defers it, then updates without losing data or looping', async ({page, context}) => {
@@ -79,7 +83,9 @@ test('PWA offers a waiting version, defers it, then updates without losing data 
     expect(await page.evaluate(() => Object.values(localStorage).some(v => v?.includes('Сохранилось')))).toBe(true);
     expect(await page.evaluate(async () => !!(await Asya2.photoGet('update-photo')))).toBe(true);
     expect(await page.evaluate(() => Array.from(document.querySelectorAll('#ol-am input[type=checkbox]')).some(x => x.id === 'am-wash' && x.checked))).toBe(true);
-    expect(await page.evaluate(async () => (await caches.keys()).includes('asya-moonlight-v2'))).toBe(true);
+    const cacheNames = await page.evaluate(() => caches.keys());
+    expect(cacheNames).toContain('asya-moonlight-v2');
+    expect(cacheNames).not.toContain('asya-moonlight-test-old');
     await page.waitForTimeout(600);
     expect(navigationCount).toBe(before + 1);
     await context.setOffline(true);
@@ -89,4 +95,13 @@ test('PWA offers a waiting version, defers it, then updates without losing data 
     await context.setOffline(false);
     await new Promise(resolve => server.close(resolve));
   }
+});
+
+test('Yandex OAuth redirect is handled in the same window without retaining the token in the URL', async ({page}) => {
+  await page.route('https://cloud-api.yandex.net/**', route => route.fulfill({status:404}));
+  await page.goto('/#access_token=fixture-token&expires_in=3600');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('yds:asya-uhod') || '{}').tok)).toBe('fixture-token');
+  expect(new URL(page.url()).hash).toBe('');
+  await page.reload();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('yds:asya-uhod') || '{}').tok)).toBe('fixture-token');
 });
