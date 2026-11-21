@@ -1,0 +1,5 @@
+const {defineConfig,devices}=require('@playwright/test');
+module.exports=defineConfig({testDir:'./tests/e2e',timeout:45000,use:{baseURL:'http://127.0.0.1:4173',headless:true},projects:[
+  {name:'chromium',use:{browserName:'chromium',launchOptions:process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{}}},
+  {name:'webkit-iphone',use:{...devices['iPhone 13'],browserName:'webkit'}}
+],webServer:{command:'python3 -m http.server 4173 --bind 127.0.0.1',url:'http://127.0.0.1:4173',reuseExistingServer:!process.env.CI},reporter:'list'});
