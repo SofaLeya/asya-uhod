@@ -6,6 +6,56 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '../..');
 const oldWorker = `const C='asya-moonlight-test-old';self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(['./','index.html'])))});self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));self.addEventListener('fetch',e=>{if(e.request.url.startsWith(self.registration.scope))e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)))});`;
 
+test('Мой уход and silver crown fit mobile headers in both themes', async ({page}) => {
+  await page.goto('/');
+  await expect(page.locator('header h1')).toHaveText('Мой уход');
+  await expect(page.locator('.title-crown')).toHaveAttribute('aria-hidden', 'true');
+  await page.locator('.ydsync-badge').evaluate(el => {el.hidden = false; el.textContent = 'Диск подключён'});
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({width, height: 720});
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(value => document.documentElement.dataset.theme = value, theme);
+      const title = await page.locator('header h1').boundingBox();
+      const crown = await page.locator('.title-crown').boundingBox();
+      const badge = await page.locator('.ydsync-badge').boundingBox();
+      expect(crown.x).toBeGreaterThanOrEqual(title.x + title.width - 1);
+      expect(crown.x + crown.width).toBeLessThanOrEqual(badge.x + 1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    }
+  }
+});
+
+test('Moonlight progress and the single care switch fit iPhone WebKit', async ({page, browserName}) => {
+  test.skip(browserName !== 'webkit', 'Mobile WebKit project');
+  await page.goto('/');
+  await expect(page.locator('#today-summary #period-cards .hero-period')).toHaveCount(2);
+  await expect(page.locator('#care-tabs button')).toHaveCount(2);
+  await expect(page.locator('.period-card,#care-complete,[data-switch-other]')).toHaveCount(0);
+  for (const width of [320, 360, 390]) {
+    await page.setViewportSize({width, height: 720});
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(value => document.documentElement.dataset.theme = value, theme);
+      const layout = await page.locator('#today-summary').evaluate(hero => {
+        const card = hero.getBoundingClientRect();
+        const items = [...hero.querySelectorAll('.hero-period')].map(el => el.getBoundingClientRect());
+        return {card: {left:card.left,right:card.right}, items:items.map(r => ({left:r.left,right:r.right,top:r.top})), scrollWidth:document.documentElement.scrollWidth};
+      });
+      expect(layout.items).toHaveLength(2);
+      expect(Math.abs(layout.items[0].top - layout.items[1].top)).toBeLessThan(1);
+      for (const item of layout.items) {
+        expect(item.left).toBeGreaterThanOrEqual(layout.card.left);
+        expect(item.right).toBeLessThanOrEqual(layout.card.right);
+      }
+      expect(layout.scrollWidth).toBeLessThanOrEqual(width);
+      await page.locator('#care-tabs [data-period=pm]').click();
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+      const navTop = await page.locator('.bottom-nav').evaluate(el => el.getBoundingClientRect().top);
+      const lastBottom = await page.locator('#all-pm').evaluate(el => el.getBoundingClientRect().bottom);
+      expect(lastBottom).toBeLessThanOrEqual(navTop);
+    }
+  }
+});
+
 test('iPhone layout, Safari installation guidance and standalone display', async ({page, browserName}) => {
   test.skip(browserName !== 'webkit', 'Mobile WebKit project');
   await page.goto('/');
@@ -84,7 +134,7 @@ test('PWA offers a waiting version, defers it, then updates without losing data 
     expect(await page.evaluate(async () => !!(await Asya2.photoGet('update-photo')))).toBe(true);
     expect(await page.evaluate(() => Array.from(document.querySelectorAll('#ol-am input[type=checkbox]')).some(x => x.id === 'am-wash' && x.checked))).toBe(true);
     const cacheNames = await page.evaluate(() => caches.keys());
-    expect(cacheNames).toContain('asya-moonlight-v2');
+    expect(cacheNames).toContain('asya-moonlight-v4');
     expect(cacheNames).not.toContain('asya-moonlight-test-old');
     await page.waitForTimeout(600);
     expect(navigationCount).toBe(before + 1);

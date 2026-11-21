@@ -1,5 +1,5 @@
 /* Only the application shell is cached. Storage and cloud responses are never touched. */
-const CACHE = 'asya-moonlight-v2';
+const CACHE = 'asya-moonlight-v4';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'tgbk.js', 'ydsync.js', 'core.js', 'app.js', 'app2.js', 'pwa.js', 'beauty.css', 'moonlight-decor.svg'];
 const FILES = new Set(SHELL.map(path => new URL(path, self.registration.scope).pathname));
 
