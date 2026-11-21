@@ -185,7 +185,7 @@
       if(document.visibilityState==='visible')setTimeout(sync,800);
       else if(dirty()){clearTimeout(timer);sync()}}); // свернули с неотправленным - отправляем сразу
     window.addEventListener('pagehide',function(){if(on()&&dirty()&&!busy){clearTimeout(timer);sync()}});
-    window.addEventListener('beforeunload',function(e){if(!leaving&&on()&&st!=='err'&&(dirty()||busy)){clearTimeout(timer);if(!busy)sync();e.preventDefault();e.returnValue=''}});
+    window.addEventListener('beforeunload',function(e){if(!leaving&&!window.__asyaPwaUpdating&&on()&&st!=='err'&&(dirty()||busy)){clearTimeout(timer);if(!busy)sync();e.preventDefault();e.returnValue=''}});
     setInterval(function(){if(on()&&!busy&&document.visibilityState==='visible')sync()},60000);
     window.addEventListener('storage',function(e){if(e.key===KEY){if(on()&&st==='off')sync();else paint()}});
     paint();

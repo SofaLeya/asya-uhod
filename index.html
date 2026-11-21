@@ -8,6 +8,9 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#12101D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Асина Умывалочка">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Prata&display=swap">
 <style>
@@ -275,12 +278,6 @@ li.waitstep .row{padding-right:16px}
       <li>Через 2-3 месяца без улучшения.</li>
     </ul>
     <p>Дерматолог по ОМС бесплатно, по направлению терапевта.</p>
-  </section><section class="memo-group"><h3>Как сделать иконкой на iPhone</h3><ul>
-      <li>Открыть эту страницу в Safari.</li>
-      <li>Нажать "Поделиться" (квадрат со стрелкой вверх).</li>
-      <li>Выбрать "На экран "Домой"" и нажать "Добавить".</li>
-    </ul>
-    <p>Важно: у иконки и у Safari память отдельная. Поставь иконку сразу и отмечай галочки уже в ней, иначе отметки из Safari туда не попадут (перенести можно через "Скопировать копию").</p>
   </section>
   </div></details>
 
@@ -309,11 +306,12 @@ li.waitstep .row{padding-right:16px}
   </section>
 </div>
 
+<aside id="pwa-update" class="pwa-update" role="status" aria-live="polite" hidden><span id="pwa-update-message">Доступна новая версия ✨</span><div><button type="button" class="bk" data-update="now">Обновить</button><button type="button" class="mini" data-update="later">Позже</button></div></aside>
 <script src="tgbk.js"></script>
 <script src="ydsync.js"></script>
 <script src="core.js"></script>
 <script src="app2.js"></script>
 <script src="app.js"></script>
-<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(function(){})}</script>
+<script src="pwa.js"></script>
 </body>
 </html>
