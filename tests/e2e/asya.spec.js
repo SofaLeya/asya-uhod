@@ -25,7 +25,28 @@ test('new Asya cloud writes use a separate file path',async({page})=>{let upload
 test('corrupt local settings block cloud uploads until a reviewed replacement',async({page})=>{let uploads=0;await page.addInitScript(()=>{localStorage.setItem('ananas:schemaVersion','2');localStorage.setItem('ananas:cfg','{broken');localStorage.setItem('ananas:products','[]');localStorage.setItem('yds:asya-uhod',JSON.stringify({tok:'fixture-token',dev:'fixture-device'}))});await page.route('https://cloud-api.yandex.net/**',route=>{if(route.request().url().includes('/upload?'))uploads++;return route.fulfill({status:404})});await open(page);await nav(page,'more').click();await expect(page.locator('.ydsync-box')).toContainText('локальные данные повреждены');await page.locator('[data-yds=now]').click();expect(uploads).toBe(0);expect(await page.evaluate(()=>localStorage.getItem('ananas:cfg'))).toBe('{broken')});
 
 });
-test.describe('mocked Telegram without a Service Worker intercepting Playwright routes',()=>{test.use({serviceWorkers:'block'});test('Telegram backup remains wired to Asya app with mocked API',async({page})=>{let payload='';await page.addInitScript(()=>{localStorage.setItem('tgbk-cfg',JSON.stringify({token:'fixture-token',chat:42,bot:'fixture'}));localStorage.setItem('ananas:2026-01-01','{"am-wash":true}');localStorage.setItem('skin:2026-01-01','{"pm-adapalene":true}')});await page.route('https://api.telegram.org/**',async route=>{if(route.request().url().includes('sendDocument'))payload=route.request().postDataBuffer()?.toString()||route.request().postData()||'';await route.fulfill({json:{ok:true,result:{}}})});await open(page);await nav(page,'more').click();await page.locator('.tgbk summary').last().click();await page.locator('[data-tgbk=now]').click();await expect.poll(()=>payload).toContain('asya-uhod');expect(payload).toContain('ananas:2026-01-01');expect(payload).not.toContain('pm-adapalene')});});
+test('Telegram backup keeps only Asya data in a mocked request',async({page})=>{
+  await page.addInitScript(()=>{
+    localStorage.setItem('tgbk-cfg',JSON.stringify({token:'fixture-token',chat:42,bot:'fixture'}));
+    localStorage.setItem('ananas:2026-01-01','{"am-wash":true}');
+    localStorage.setItem('skin:2026-01-01','{"pm-adapalene":true}');
+    const nativeFetch=window.fetch;
+    window.__telegramPayloads=[];
+    window.fetch=async function(input,options){
+      const url=typeof input==='string'?input:input.url;
+      if(url.startsWith('https://api.telegram.org/')){
+        const file=options?.body?.get('document');
+        window.__telegramPayloads.push(file?await file.text():'');
+        return new Response(JSON.stringify({ok:true,result:{}}),{status:200,headers:{'Content-Type':'application/json'}});
+      }
+      return nativeFetch.call(this,input,options);
+    };
+  });
+  await open(page);await nav(page,'more').click();await page.locator('.tgbk summary').last().click();await page.locator('[data-tgbk=now]').click();
+  await expect.poll(()=>page.evaluate(()=>window.__telegramPayloads.find(Boolean)||'')).toContain('asya-uhod');
+  const payload=await page.evaluate(()=>window.__telegramPayloads.find(Boolean));
+  expect(payload).toContain('ananas:2026-01-01');expect(payload).not.toContain('pm-adapalene');
+});
 test('course reset confirmation preserves old marks and diary with safety copy',async({page})=>{await page.addInitScript(()=>{localStorage.setItem('ananas:start',JSON.stringify('2026-11-01'));localStorage.setItem('ananas:2026-11-02','{"am-wash":true}');localStorage.setItem('ananas:diary:2026-11-02','{"s":4}')});await open(page);await nav(page,'more').click();page.once('dialog',d=>d.dismiss());await page.locator('#restart').click();expect(await page.evaluate(()=>localStorage.getItem('ananas:start'))).toContain('2026-11-01');page.once('dialog',d=>d.accept());await page.locator('#restart').click();await expect.poll(()=>page.evaluate(()=>localStorage.getItem('ananas:start'))).toBeNull();expect(await page.evaluate(()=>localStorage.getItem('ananas:2026-11-02'))).toContain('am-wash');expect(await page.evaluate(()=>localStorage.getItem('ananas:diary:2026-11-02'))).toContain('"s":4');expect(await page.evaluate(()=>localStorage.getItem('asya2:safety:restore'))).toBeTruthy()});
 test('photo backup imports twice without product duplication',async({page})=>{await open(page);page.on('dialog',d=>d.accept());const result=await page.evaluate(async()=>{await Asya2.photoPut('photo-repeat',new Blob([new Uint8Array([137,80,78,71,13,10,26,10])],{type:'image/png'}));const backup={app:'asya-uhod',v:2,data:AsyaCore.snapshot(localStorage),photos:await Asya2.photosExport()};await Asya2.importBackup(backup,'merge');await Asya2.importBackup(backup,'merge');const p=Asya2.getProducts();return {photo:!!(await Asya2.photoGet('photo-repeat')),count:p.length,unique:new Set(p.map(x=>x.id)).size}});expect(result.photo).toBe(true);expect(result.count).toBe(result.unique)});
 test('settings support keyboard and reduced motion',async({page})=>{await page.emulateMedia({reducedMotion:'reduce'});await open(page);await nav(page,'more').click();const outer=page.locator('#all-settings-card > .settings-card-trigger');await outer.focus();await page.keyboard.press('Enter');await expect(outer).toHaveAttribute('aria-expanded','true');const steps=page.locator('#steps-card > .settings-card-trigger');await steps.focus();await page.keyboard.press('Space');await expect(steps).toHaveAttribute('aria-expanded','true');expect(await page.locator('#steps-panel').evaluate(x=>x.getAnimations().length)).toBe(0)});
