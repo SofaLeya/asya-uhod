@@ -47,7 +47,25 @@ test('Telegram backup keeps only Asya data in a mocked request',async({page})=>{
   const payload=await page.evaluate(()=>window.__telegramPayloads.find(Boolean));
   expect(payload).toContain('ananas:2026-01-01');expect(payload).not.toContain('pm-adapalene');
 });
-test('course reset confirmation preserves old marks and diary with safety copy',async({page})=>{await page.addInitScript(()=>{localStorage.setItem('ananas:start',JSON.stringify('2026-11-01'));localStorage.setItem('ananas:2026-11-02','{"am-wash":true}');localStorage.setItem('ananas:diary:2026-11-02','{"s":4}')});await open(page);await nav(page,'more').click();page.once('dialog',d=>d.dismiss());await page.locator('#restart').click();expect(await page.evaluate(()=>localStorage.getItem('ananas:start'))).toContain('2026-11-01');page.once('dialog',d=>d.accept());await page.locator('#restart').click();await expect.poll(()=>page.evaluate(()=>localStorage.getItem('ananas:start'))).toBeNull();expect(await page.evaluate(()=>localStorage.getItem('ananas:2026-11-02'))).toContain('am-wash');expect(await page.evaluate(()=>localStorage.getItem('ananas:diary:2026-11-02'))).toContain('"s":4');expect(await page.evaluate(()=>localStorage.getItem('asya2:safety:restore'))).toBeTruthy()});
+test('course reset confirmation preserves old marks and diary with safety copy',async({page})=>{
+  await page.addInitScript(()=>{
+    localStorage.setItem('ananas:start',JSON.stringify('2026-11-01'));
+    localStorage.setItem('ananas:2026-11-02','{"am-wash":true}');
+    localStorage.setItem('ananas:diary:2026-11-02','{"s":4}');
+  });
+  await open(page);await nav(page,'more').click();
+  await page.evaluate(()=>{window.__confirmText=[];window.confirm=message=>{window.__confirmText.push(message);return false}});
+  await page.locator('#restart').click();
+  expect(await page.evaluate(()=>localStorage.getItem('ananas:start'))).toContain('2026-11-01');
+  await page.evaluate(()=>{window.confirm=message=>{window.__confirmText.push(message);return true}});
+  await page.locator('#restart').click();
+  await expect.poll(()=>page.evaluate(()=>localStorage.getItem('ananas:start'))).toBeNull();
+  const confirmations=await page.evaluate(()=>window.__confirmText);
+  expect(confirmations).toHaveLength(2);expect(confirmations[0]).toContain('курс');
+  expect(await page.evaluate(()=>localStorage.getItem('ananas:2026-11-02'))).toContain('am-wash');
+  expect(await page.evaluate(()=>localStorage.getItem('ananas:diary:2026-11-02'))).toContain('"s":4');
+  expect(await page.evaluate(()=>localStorage.getItem('asya2:safety:restore'))).toBeTruthy();
+});
 test('photo backup imports twice without product duplication',async({page})=>{await open(page);page.on('dialog',d=>d.accept());const result=await page.evaluate(async()=>{await Asya2.photoPut('photo-repeat',new Blob([new Uint8Array([137,80,78,71,13,10,26,10])],{type:'image/png'}));const backup={app:'asya-uhod',v:2,data:AsyaCore.snapshot(localStorage),photos:await Asya2.photosExport()};await Asya2.importBackup(backup,'merge');await Asya2.importBackup(backup,'merge');const p=Asya2.getProducts();return {photo:!!(await Asya2.photoGet('photo-repeat')),count:p.length,unique:new Set(p.map(x=>x.id)).size}});expect(result.photo).toBe(true);expect(result.count).toBe(result.unique)});
 test('settings support keyboard and reduced motion',async({page})=>{await page.emulateMedia({reducedMotion:'reduce'});await open(page);await nav(page,'more').click();const outer=page.locator('#all-settings-card > .settings-card-trigger');await outer.focus();await page.keyboard.press('Enter');await expect(outer).toHaveAttribute('aria-expanded','true');const steps=page.locator('#steps-card > .settings-card-trigger');await steps.focus();await page.keyboard.press('Space');await expect(steps).toHaveAttribute('aria-expanded','true');expect(await page.locator('#steps-panel').evaluate(x=>x.getAnimations().length)).toBe(0)});
 test('corrupt settings can be recovered from an old Asya file by replacement',async({page})=>{await page.addInitScript(()=>{localStorage.setItem('ananas:schemaVersion','2');localStorage.setItem('ananas:cfg','{broken');localStorage.setItem('ananas:products','[]')});await open(page);const old={app:'asya-uhod',v:1,data:{'ananas:prod':'{"cleanser":"Восстановленный гель"}','ananas:2026-01-05':'{"am-wash":true}'}};page.on('dialog',d=>d.accept());await page.evaluate(j=>{window.restoreJob=Asya2.importBackup(j)},old);await expect(page.locator('.import-dialog')).toContainText('повреждены');await page.locator('[data-choice=replace]').click();await page.evaluate(()=>window.restoreJob);await nav(page,'bag').click();await expect(page.locator('.product-card h3')).toContainText(['Восстановленный гель']);expect(await page.evaluate(()=>Asya2.getProducts().length)).toBeGreaterThan(0);expect(await page.evaluate(()=>window.__asyaMigrationError)).toBe('')});

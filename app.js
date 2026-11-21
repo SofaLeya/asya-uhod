@@ -423,7 +423,7 @@
     await Asya2.safety(); state = {}; save(today,state); render();
   });
   $("restart").addEventListener("click", async ()=>{
-    if(!confirm("Начать курс азелаинкуа заново? Старые отметки и дневник сохранятся, но перестанут учитываться для начала курса.")) return;
+    if(!confirm("Начать курс азелаиновой кислоты заново? Старые отметки и дневник сохранятся, но перестанут учитываться для начала курса.")) return;
     await Asya2.safety();
     try{ localStorage.removeItem(PREFIX+"start"); }catch(e){}
     render();
