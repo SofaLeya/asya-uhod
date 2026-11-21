@@ -29,9 +29,9 @@
   function sendFile(a,manual){ // одна отправка за раз: автокопия и ручная/при подключении не дублируют друг друга
     if(inflight)return inflight;
     return inflight=sendFile0(a,manual).then(function(r){inflight=null;return r},function(e){inflight=null;throw e})}
-  function sendFile0(a,manual){
+  async function sendFile0(a,manual){
     var c=cfg();if(!c.token||!c.chat)return Promise.reject(new Error('not set'));
-    var data=a.data();if(!data)return Promise.resolve(false);
+    var data=await a.data();if(!data)return false;
     var d=today(),lk='tgbk-last:'+a.app,last=get(lk,{}),h=hash(data);
     if(!manual&&last.h===h){last.d=d;put(lk,last);return Promise.resolve(false)} // ничего не менялось — не спамим
     var fd=new FormData();fd.append('chat_id',c.chat);
@@ -75,7 +75,7 @@
       s+='<div style="opacity:.85">Приложение само будет присылать тебе файл-копию в Телеграм раз в день. Нужен свой бот — это бесплатно, минут 5, делается один раз для всех приложений на sofaleya.github.io.</div>'+
         '<ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px">'+
         '<li>В Телеграме открой <b>@BotFather</b> → нажми «Старт» → отправь <b>/newbot</b>.</li>'+
-        '<li>Придумай имя (например, «Мои копии») и адрес, который заканчивается на <b>bot</b> (например, <i>sofia_kopii_bot</i>).</li>'+
+        '<li>Придумай имя (например, «Мои копии») и адрес, который заканчивается на <b>bot</b> (например, <i>asya_kopii_bot</i>).</li>'+
         '<li>BotFather пришлёт ключ вида <i>1234567890:AAF…</i> — скопируй его целиком.</li>'+
         '<li>Открой своего бота по ссылке из того же сообщения и нажми <b>«Старт»</b>.</li>'+
         '<li>Вставь ключ сюда и нажми «Подключить».</li></ol>'+

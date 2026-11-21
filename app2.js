@@ -1,0 +1,161 @@
+(function(){'use strict';
+const C=window.AsyaCore, $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let app,ready=false,range=30,query='',filter='all',editing=null;
+const defaultPeriod=()=>{const h=new Date().getHours();return h>=5&&h<17?'am':'pm'};
+let carePeriod=sessionStorage.getItem('asya2:carePeriod')||defaultPeriod();
+function getProducts(){try{const p=JSON.parse(localStorage.getItem('ananas:products')||'[]');return Array.isArray(p)?p:[]}catch{return []}}
+function setProducts(p){if(app.migrationError)throw Error('Сначала восстанови повреждённые данные');localStorage.setItem('ananas:products',JSON.stringify(p));render()}
+function switchTab(tab){document.querySelectorAll('[data-screen]').forEach(x=>x.hidden=x.dataset.screen!==tab);document.querySelectorAll('.bottom-nav button').forEach(x=>{const on=x.dataset.tab===tab;x.classList.toggle('active',on);x.setAttribute('aria-current',on?'page':'false')});sessionStorage.setItem('asya2:tab',tab);render()}
+function mount(){const wrap=document.querySelector('.wrap'), children=[...wrap.children];const header=children[0],phase=children[1],am=children[2],pm=children[3],track=children[4],rules=children[5],actions=children[6],editor=children[7],backup=children[8];
+ const root=document.createElement('main');root.id='screens';wrap.appendChild(root);
+ const mk=(name,title)=>{const x=document.createElement('div');x.dataset.screen=name;x.className='screen';x.innerHTML='<h2 class="screen-title">'+title+'</h2>';root.appendChild(x);return x};
+ const today=mk('today','Сегодня'),calendar=mk('calendar','Календарь'),analysis=mk('analysis','Анализ'),bag=mk('bag','Косметичка'),more=mk('more','Ещё');
+ header.querySelector('h1').textContent='Асин уход';
+ const hero=document.createElement('section');hero.id='today-summary';hero.className='hero-card';
+ const periods=document.createElement('div');periods.id='period-cards';periods.className='period-cards';
+ const overview=document.createElement('section');overview.id='care-overview';overview.className='care-overview';
+ overview.innerHTML='<div class="skin-today"><span>Кожа сегодня</span><strong id="skin-today-status">Нет записи</strong><span id="calm-indicator" class="calm-indicator" hidden>Кожа раздражена</span><button type="button" class="mini" id="open-diary">Дневник →</button></div>';
+ overview.appendChild(phase);
+ const tabs=document.createElement('div');tabs.id='care-tabs';tabs.className='care-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Период ухода');
+ tabs.innerHTML='<button type="button" role="tab" data-period="am" aria-controls="care-am">☀ Утро</button><button type="button" role="tab" data-period="pm" aria-controls="care-pm">☾ Вечер</button>';
+ am.id='care-am';pm.id='care-pm';am.setAttribute('role','tabpanel');pm.setAttribute('role','tabpanel');
+ const settings=document.createElement('details');settings.className='care-settings';settings.innerHTML='<summary>Настройки схемы ухода</summary>';settings.appendChild(phase.querySelector('#sws'));
+ const calm=document.createElement('section');calm.id='calm-guide';calm.className='backup';
+ const complete=document.createElement('section');complete.id='care-complete';complete.className='care-complete';
+ today.append(header,hero,periods,overview,tabs,settings,calm,complete,am,pm);
+ calendar.append(track);analysis.innerHTML+='<div class="track"><div class="range-tabs" id="range-tabs"><button data-range="7">7 дней</button><button data-range="30">30 дней</button><button data-range="90">90 дней</button></div><div id="analysis-stats"></div><div id="analysis-chart"></div><p class="note">Графики показывают записи дневника и не являются медицинской оценкой.</p></div>';
+ bag.innerHTML+='<div class="bag-tools"><input id="product-search" type="search" placeholder="Поиск средства" aria-label="Поиск средства"><select id="product-filter" aria-label="Статус средства"><option value="all">Все статусы</option><option value="using">Использую</option><option value="spare">Запас</option><option value="planned">Планирую</option><option value="empty">Закончилось</option><option value="archive">Архив</option></select></div><button class="bk" id="product-add">+ Добавить средство</button><div id="product-list" class="product-list"></div>';
+ more.append(rules);
+ more.insertAdjacentHTML('beforeend',`
+   <section class="settings-card" id="care-mode-card">
+     <button type="button" class="settings-card-trigger" aria-expanded="false" aria-controls="care-mode-panel">
+       <span class="memo-heading"><strong>Настройки ухода</strong><small>Раздражение и особенности кожи</small></span>
+       <span class="memo-arrow" aria-hidden="true">⌄</span>
+     </button>
+     <div class="settings-panel" id="care-mode-panel" hidden>
+       <label class="sw"><input type="checkbox" id="calm-toggle"><span>Кожа раздражена</span></label>
+       <p class="note">Показывает щадящие шаги и подсказки. Асин график азелаинки не меняется.</p>
+     </div>
+   </section>
+   <section class="settings-card" id="appearance-card">
+     <button type="button" class="settings-card-trigger" aria-expanded="false" aria-controls="appearance-panel">
+       <span class="memo-heading"><strong>Оформление</strong><small>Светлая и тёмная темы</small></span>
+       <span class="memo-arrow" aria-hidden="true">⌄</span>
+     </button>
+     <div class="settings-panel" id="appearance-panel" hidden>
+       <label class="fld">Тема<select id="theme-select"><option value="system">Как в системе</option><option value="light">Светлая</option><option value="dark">Тёмная</option></select></label>
+     </div>
+   </section>
+   <section class="settings-card" id="reminders-card">
+     <button type="button" class="settings-card-trigger" aria-expanded="false" aria-controls="reminders-panel">
+       <span class="memo-heading"><strong>Напоминания</strong><small>Время ухода и уведомления</small></span>
+       <span class="memo-arrow" aria-hidden="true">⌄</span>
+     </button>
+     <div class="settings-panel" id="reminders-panel" hidden>
+       <div class="reminder-time"><label class="fchk"><input type="checkbox" id="rem-am"> Утренний уход</label><input class="reminder-clock" type="time" id="time-am" aria-label="Время утреннего ухода"></div>
+       <div class="reminder-time"><label class="fchk"><input type="checkbox" id="rem-pm"> Вечерний уход</label><input class="reminder-clock" type="time" id="time-pm" aria-label="Время вечернего ухода"></div>
+       <label class="fchk"><input type="checkbox" id="rem-expiry"> Срок использования</label>
+       <label class="fchk"><input type="checkbox" id="rem-low"> Средство заканчивается</label>
+       <p class="note">Напоминания видны только при открытом приложении.</p>
+       <div id="reminder-list" aria-live="polite"></div>
+     </div>
+   </section>`);
+ const settingAnimations=new WeakMap();
+ more.addEventListener('click',event=>{
+   const trigger=event.target.closest('.settings-card-trigger');if(!trigger||!more.contains(trigger))return;
+   const panel=document.getElementById(trigger.getAttribute('aria-controls'));
+   const opening=trigger.getAttribute('aria-expanded')!=='true';
+   const start=panel.hidden?0:panel.getBoundingClientRect().height;
+   settingAnimations.get(panel)?.cancel();
+   trigger.setAttribute('aria-expanded',String(opening));
+   if(opening)panel.hidden=false;
+   if(matchMedia('(prefers-reduced-motion: reduce)').matches){panel.hidden=!opening;settingAnimations.delete(panel);return}
+   const end=opening?panel.scrollHeight:0;
+   const animation=panel.animate([{height:start+'px',opacity:opening?0:1},{height:end+'px',opacity:opening?1:0}],{duration:240,easing:'ease-in-out'});
+   settingAnimations.set(panel,animation);
+   animation.onfinish=()=>{if(settingAnimations.get(panel)!==animation)return;if(!opening)panel.hidden=true;settingAnimations.delete(panel)};
+ });
+ more.append(actions,editor,backup);
+ const allSettings=document.createElement('section');
+ allSettings.id='all-settings-card';allSettings.className='settings-card settings-root';
+ allSettings.innerHTML='<button type="button" class="settings-card-trigger" aria-expanded="false" aria-controls="all-settings-panel"><span class="memo-heading"><strong>Настройки</strong><small>Уход, шаги, оформление и напоминания</small></span><span class="memo-arrow" aria-hidden="true">⌄</span></button><div class="settings-panel" id="all-settings-panel" hidden></div>';
+ more.insertBefore(allSettings,more.querySelector('#care-mode-card'));
+ const stepsCard=document.createElement('section');stepsCard.id='steps-card';stepsCard.className='settings-card';
+ stepsCard.innerHTML='<button type="button" class="settings-card-trigger" aria-expanded="false" aria-controls="steps-panel"><span class="memo-heading"><strong>Настроить шаги</strong><small>Утро, вечер и порядок процедур</small></span><span class="memo-arrow" aria-hidden="true">⌄</span></button><div class="settings-panel" id="steps-panel" hidden></div>';
+ stepsCard.querySelector('#steps-panel').append(editor);
+ editor.querySelector('.edbox').open=true;
+ more.querySelector('#care-mode-panel').append(settings.querySelector('#sws'));
+ settings.remove();
+ allSettings.querySelector('#all-settings-panel').append(more.querySelector('#care-mode-card'),stepsCard,more.querySelector('#appearance-card'),more.querySelector('#reminders-card'));
+ const resetData=document.createElement('section');resetData.className='reset-data';resetData.innerHTML='<h3>Сброс данных</h3><p>Эти действия меняют отметки или отсчёт курса. Перед изменением сохраняется локальная копия.</p>';
+ resetData.append(actions);more.append(resetData);
+ const memo=more.querySelector('#care-memo');const memoContent=memo.querySelector('.memo-content');
+ let memoExpanded=false,memoAnimation=null;
+ memo.querySelector('summary').addEventListener('click',event=>{
+   if(matchMedia('(prefers-reduced-motion: reduce)').matches){memoExpanded=!memo.open;return}
+   event.preventDefault();const opening=!memoExpanded;memoExpanded=opening;
+   const start=memo.open?memoContent.getBoundingClientRect().height:0;
+   if(memoAnimation)memoAnimation.cancel();
+   if(opening)memo.open=true;
+   memo.classList.toggle('memo-closing',!opening);
+   const end=opening?memoContent.scrollHeight:0;
+   const animation=memoContent.animate([{height:start+'px',opacity:opening?0:1},{height:end+'px',opacity:opening?1:0}],{duration:240,easing:'ease-in-out'});
+   memoAnimation=animation;
+   animation.onfinish=()=>{if(memoAnimation!==animation)return;if(!memoExpanded)memo.open=false;memo.classList.remove('memo-closing');memoAnimation=null};
+ });
+ const nav=document.createElement('nav');nav.className='bottom-nav';nav.setAttribute('aria-label','Разделы');const icons={today:'<path d="m3 11 9-7 9 7v9h-6v-6H9v6H3z"/>',calendar:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/>',analysis:'<path d="M4 20V12M10 20V7M16 20V10M22 20V4"/>',bag:'<path d="M4 8h16l-1 13H5zM9 9V6a3 3 0 0 1 6 0v3"/>',more:'<path d="M4 6h16M4 12h16M4 18h16"/>'};nav.innerHTML=[['today','Сегодня'],['calendar','Календарь'],['analysis','Анализ'],['bag','Косметичка'],['more','Ещё']].map(([id,label])=>'<button type="button" data-tab="'+id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+icons[id]+'</svg><small>'+label+'</small></button>').join('');document.body.appendChild(nav);
+ const dlg=document.createElement('dialog');dlg.id='product-dialog';dlg.innerHTML='<form method="dialog" id="product-form"><h2 id="product-form-title">Средство</h2><label class="fld">Название<input name="name" required></label><label class="fld">Бренд<input name="brand"></label><label class="fld">Категория<input name="category"></label><label class="fld">Фото<input name="photo" type="file" accept="image/*"></label><label class="fld">Дата открытия<input name="opened" type="date"></label><label class="fld">PAO, месяцев<input name="pao" type="number" min="0" max="120"></label><label class="fld">Остаток, %<input name="remaining" type="number" min="0" max="100"></label><label class="fld">Статус<select name="status"><option value="using">Использую</option><option value="spare">Запас</option><option value="planned">Планирую</option><option value="empty">Закончилось</option><option value="archive">Архив</option></select></label><label class="fld">Ссылка на магазин<input name="shop" type="url"></label><fieldset id="product-steps"><legend>Связанные шаги</legend></fieldset><div class="btns"><button class="bk" type="submit" value="save">Сохранить</button><button class="reset" type="submit" value="cancel">Отмена</button></div></form>';document.body.appendChild(dlg);
+ nav.addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)switchTab(b.dataset.tab)});
+ today.addEventListener('click',e=>{const period=e.target.closest('[data-period]');if(period){switchPeriod(period.dataset.period,true);return}if(e.target.closest('#jump-next')){jumpNext();return}const other=e.target.closest('[data-switch-other]');if(other)switchPeriod(other.dataset.switchOther,true)});
+ tabs.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key))return;e.preventDefault();switchPeriod(carePeriod==='am'?'pm':'am',true);tabs.querySelector('[data-period="'+carePeriod+'"]').focus()});
+ document.addEventListener('change',e=>{if(e.target.matches('[data-f=prod],[data-f=next]')){C.reconcileProducts(localStorage,app.DEF);renderBag()}});document.addEventListener('click',e=>{if(e.target.closest('[data-act=out],[data-act=set]'))setTimeout(()=>{C.reconcileProducts(localStorage,app.DEF);renderBag()},0)});
+ $('range-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-range]');if(b){range=+b.dataset.range;renderAnalysis()}});
+ $('analysis-chart').addEventListener('click',e=>{const b=e.target.closest('[data-date]');if(b){app.select(b.dataset.date);switchTab('calendar')}});
+ $('product-search').addEventListener('input',e=>{query=e.target.value.toLowerCase();renderBag()});$('product-filter').addEventListener('change',e=>{filter=e.target.value;renderBag()});$('product-add').onclick=()=>openProduct();
+ $('product-list').addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const p=getProducts().find(x=>x.id===b.dataset.id);if(!p)return;if(b.dataset.action==='edit')openProduct(p);if(b.dataset.action==='archive'){p.status='archive';setProducts(getProducts().map(x=>x.id===p.id?p:x))}if(b.dataset.action==='delete'&&confirm('Удалить средство «'+p.name+'»?')){setProducts(getProducts().filter(x=>x.id!==p.id));photoDelete(p.id)}});
+ dlg.addEventListener('close',async()=>{if(dlg.returnValue!=='save')return;const form=$('product-form');if(!form.reportValidity())return;const fd=new FormData(form),p=editing?{...editing}:{id:'u'+crypto.randomUUID(),stepIds:[]};for(const field of ['name','brand','category','opened','remaining','status','shop'])p[field]=String(fd.get(field)||'').trim();p.pao=Number(fd.get('pao'))||0;p.stepIds=fd.getAll('steps');const file=fd.get('photo');if(file&&file.size){try{await photoPut(p.id,file)}catch(err){alert('Не удалось сохранить фото: '+err.message);return}}const all=getProducts();const idx=all.findIndex(x=>x.id===p.id);if(idx>=0)all[idx]=p;else all.push(p);setProducts(all)});
+ const theme=localStorage.getItem('ananas:ui:theme')||'system';$('theme-select').value=theme;applyTheme(theme);$('theme-select').onchange=e=>{localStorage.setItem('ananas:ui:theme',e.target.value);applyTheme(e.target.value)};
+ $('calm-toggle').checked=!!app.cfg.calm;$('calm-toggle').onchange=e=>{app.cfg.calm=e.target.checked;app.saveCfg();render()};
+ const rem=app.cfg.reminders||{};for(const key of ['am','pm','expiry','low']){$('rem-'+key).checked=!!rem[key];$('rem-'+key).onchange=e=>{app.cfg.reminders={...(app.cfg.reminders||{}),[key]:e.target.checked};app.saveCfg();render()}}for(const key of ['am','pm']){$('time-'+key).value=rem['time'+key]||(key==='am'?'08:00':'20:00');$('time-'+key).onchange=e=>{app.cfg.reminders={...(app.cfg.reminders||{}),['time'+key]:e.target.value};app.saveCfg();render()}};
+ switchTab(sessionStorage.getItem('asya2:tab')||'today');
+}
+function applyTheme(theme){document.documentElement.dataset.theme=theme}
+function refreshSettings(){const theme=localStorage.getItem('ananas:ui:theme')||'system';$('theme-select').value=theme;applyTheme(theme);$('calm-toggle').checked=!!app.cfg.calm;const rem=app.cfg.reminders||{};for(const key of ['am','pm','expiry','low'])$('rem-'+key).checked=!!rem[key];for(const key of ['am','pm'])$('time-'+key).value=rem['time'+key]||(key==='am'?'08:00':'20:00')}
+function openProduct(p){editing=p||null;const f=$('product-form');f.reset();$('product-form-title').textContent=p?'Изменить средство':'Новое средство';for(const field of ['name','brand','category','opened','pao','remaining','status','shop'])f.elements[field].value=p?.[field]??'';$('product-steps').innerHTML='<legend>Связанные шаги</legend>'+['am','pm'].flatMap(g=>app.order(g)).map(id=>{const s=app.eff(id);return '<label class="fchk"><input type="checkbox" name="steps" value="'+esc(id)+'" '+(p?.stepIds?.includes(id)?'checked':'')+'> '+esc(s.name)+'</label>'}).join('');$('product-dialog').showModal()}
+function renderBag(){const list=getProducts().filter(p=>(filter==='all'||p.status===filter)&&((p.name+' '+p.brand+' '+p.category).toLowerCase().includes(query)));$('product-list').innerHTML=list.length?list.map(p=>'<article class="product-card" data-product="'+esc(p.id)+'"><div class="product-photo" aria-hidden="true">✿</div><div><h3>'+esc(p.name)+'</h3><p>'+esc(p.brand||'')+' · '+esc(p.category||'Другое')+'</p><p>'+({using:'Использую',spare:'Запас',planned:'Планирую',empty:'Закончилось',archive:'Архив'}[p.status]||'')+(p.remaining!==''&&p.remaining!=null?' · '+esc(p.remaining)+'%':'')+'</p><p class="note">'+(p.stepIds||[]).map(id=>esc(app.eff(id)?.name||id)).join(', ')+'</p>'+(p.shop?'<a href="'+esc(p.shop)+'" target="_blank" rel="noopener noreferrer">Магазин</a>':'')+'</div><div class="product-actions"><button class="mini" data-action="edit" data-id="'+esc(p.id)+'">Изменить</button><button class="mini" data-action="archive" data-id="'+esc(p.id)+'">В архив</button><button class="mini danger" data-action="delete" data-id="'+esc(p.id)+'">Удалить</button></div></article>').join(''):'<p class="note">Средств по этому запросу нет.</p>';list.forEach(async p=>{const blob=await photoGet(p.id);const card=document.querySelector('[data-product="'+CSS.escape(p.id)+'"]');if(blob&&card){const img=document.createElement('img');img.alt='Фото '+p.name;img.src=URL.createObjectURL(blob);img.onload=()=>URL.revokeObjectURL(img.src);card.querySelector('.product-photo').replaceWith(img)}})}
+function renderAnalysis(){const a=C.analytics(localStorage,app.today,range);$('range-tabs').querySelectorAll('button').forEach(b=>b.classList.toggle('active',+b.dataset.range===range));$('analysis-stats').innerHTML='<div class="stat-grid"><div><b>'+a.points.length+'</b><span>записей кожи</span></div><div><b>'+a.applied+'</b><span>дней с азелаинкой</span></div><div><b>'+(a.completion===null?'—':a.completion+'%')+'</b><span>выполнение ухода*</span></div></div><p class="note">* Среди дней с отметками ухода. Дни без записей исключены.</p>';
+ const chart=(title,values,max)=>'<div class="chart"><h3>'+title+'</h3><div class="chart-bars">'+values.map(p=>'<button type="button" data-date="'+p.date+'" title="'+p.date+': '+p.value+'" aria-label="'+p.date+': '+p.value+'"><i style="height:'+Math.max(5,p.value/max*100)+'%"></i></button>').join('')+'</div></div>';
+ $('analysis-chart').innerHTML=a.points.length?chart('Состояние кожи',a.points.map(p=>({date:p.date,value:p.score})),5)+chart('Раздражение',a.points.map(p=>({date:p.date,value:p.irritation})),1)+chart('Шелушение',a.points.map(p=>({date:p.date,value:p.peeling})),1):'<p class="note">За этот период нет записей дневника.</p>'}
+function daysLeft(opened,pao){if(!opened||!pao)return null;const d=new Date(opened+'T12:00:00');d.setMonth(d.getMonth()+Number(pao));return Math.ceil((d-Date.now())/86400000)}
+function reminders(){const cfg=app.cfg.reminders||{},now=new Date(),clock=now.toTimeString().slice(0,5),out=[];for(const [g,label] of [['am','утреннего'],['pm','вечернего']])if(cfg[g]&&clock>=(cfg['time'+g]||(g==='am'?'08:00':'20:00'))&&!app.state['_'+g])out.push('Время '+label+' ухода');for(const p of getProducts()){if(p.status!=='using')continue;if(cfg.expiry){const left=daysLeft(p.opened,p.pao);if(left!==null&&left<=14)out.push('Срок «'+p.name+'» '+(left<0?'истёк':'истекает через '+left+' дн.'))}if(cfg.low&&p.remaining!==''&&Number(p.remaining)<=20)out.push('Заканчивается «'+p.name+'»')}return out}
+function required(g){return [...document.querySelectorAll('#ol-'+g+' .step input')].filter(x=>!x.closest('li').hidden&&!x.disabled&&!x.dataset.opt)}
+function switchPeriod(g,manual=false){if(!['am','pm'].includes(g))return;carePeriod=g;if(manual)sessionStorage.setItem('asya2:carePeriod',g);document.querySelectorAll('#care-tabs [data-period]').forEach(b=>{const selected=b.dataset.period===g;b.classList.toggle('selected',selected);b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1});$('care-am').hidden=g!=='am';$('care-pm').hidden=g!=='pm';if(ready)renderToday()}
+function jumpNext(){const next=['am','pm'].flatMap(required).find(x=>!x.checked);if(!next)return;switchPeriod(next.dataset.g,true);const li=next.closest('li');li.classList.remove('step-spotlight');void li.offsetWidth;li.classList.add('step-spotlight');li.tabIndex=-1;li.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});li.focus({preventScroll:true});setTimeout(()=>li.classList.remove('step-spotlight'),1800)}
+function renderToday(){
+ if(!sessionStorage.getItem('asya2:carePeriod'))carePeriod=defaultPeriod();
+ const am=required('am'),pm=required('pm'),all=[...am,...pm],done=all.filter(x=>x.checked).length,next=all.find(x=>!x.checked),diary=(()=>{try{return JSON.parse(localStorage.getItem('ananas:diary:'+app.today)||'{}')}catch{return {}}})(),rem=reminders();
+ const message=done===all.length?'Сегодня всё сделано ✨':done===0?'Начни с заботы о себе ✨':'Отличный ритм — продолжай ✨';
+ $('today-summary').innerHTML='<div class="hero-top"><span>Уход сегодня</span><span aria-hidden="true">✦</span></div><strong id="care-progress">'+done+' из '+all.length+'</strong><span class="hero-caption">обязательных процедур</span><progress max="'+(all.length||1)+'" value="'+done+'" aria-label="Общий прогресс ухода"></progress><div class="hero-bottom"><span>'+message+'</span>'+(next?'<button type="button" id="jump-next">Следующий шаг →</button>':'')+'</div>';
+ $('period-cards').innerHTML=[['am','Утро','☀',am],['pm','Вечер','☾',pm]].map(([g,label,icon,boxes])=>'<button type="button" class="period-card" data-period="'+g+'"><span>'+icon+' '+label+'</span><strong>'+boxes.filter(x=>x.checked).length+' / '+boxes.length+'</strong></button>').join('');
+ $('skin-today-status').textContent=diary.s?diary.s+' / 5':'Нет записи';$('calm-indicator').hidden=!app.cfg.calm;$('open-diary').onclick=()=>switchTab('calendar');
+ const current=carePeriod==='am'?am:pm,finished=current.length>0&&current.every(x=>x.checked),other=carePeriod==='am'?'pm':'am';
+ $('care-complete').hidden=!finished;$('care-complete').innerHTML=finished?'<div class="complete-mark" aria-hidden="true">✦</div><div><strong>'+(carePeriod==='am'?'Утренний уход завершён ♛ ✨':'Вечерний уход завершён ♛ 🌙')+'</strong><span>Все обязательные шаги отмечены</span></div><button type="button" data-switch-other="'+other+'">К '+(other==='am'?'утру':'вечеру')+' →</button>':'';
+ document.querySelectorAll('#ol-am li,#ol-pm li').forEach(li=>{li.classList.toggle('is-complete',!!li.querySelector('.step input')?.checked);const s=app.eff(li.dataset.id);li.classList.toggle('potential-irritant',!!app.cfg.calm&&/азелаин|витамин.?c|кислот|скраб/i.test((s?.name||'')+' '+(s?.prod||'')))});
+ const calm=!!app.cfg.calm;$('calm-toggle').checked=calm;$('calm-guide').hidden=!calm;const safeIds=['am-wash','am-cream','pm-wash','pm-cream'];$('calm-guide').innerHTML=calm?'<h3>Бережный уход</h3><p>Очищение и увлажнение по переносимости. Асин график ухода не меняется.</p><div class="calm-steps">'+safeIds.map(id=>{const step=app.eff(id);return '<button type="button" class="mini" data-calm-step="'+id+'">'+(app.state[id]?'✓ ':'○ ')+esc(step?.name||id)+'</button>'}).join('')+'</div><button class="mini" id="calm-diary">Записать симптомы</button><p class="note">Полная схема и инструкции доступны в соответствующей вкладке.</p>':'';if(calm){$('calm-diary').onclick=()=>switchTab('calendar');$('calm-guide').querySelectorAll('[data-calm-step]').forEach(b=>b.onclick=()=>{const input=$(b.dataset.calmStep);if(input&&!input.disabled){switchPeriod(input.dataset.g,true);input.click()}})}
+ document.getElementById('today-reminders')?.remove();if(rem.length){const note=document.createElement('div');note.id='today-reminders';note.className='reminder-strip';note.textContent=rem[0]+(rem.length>1?' · ещё '+(rem.length-1):'');$('care-overview').after(note)}
+ $('reminder-list').innerHTML=rem.length?rem.map(x=>'<p class="hint">'+esc(x)+'</p>').join(''):'<p class="note">Актуальных напоминаний нет.</p>';
+ document.querySelectorAll('#care-tabs [data-period]').forEach(b=>{const selected=b.dataset.period===carePeriod;b.classList.toggle('selected',selected);b.setAttribute('aria-selected',String(selected));b.tabIndex=selected?0:-1});$('care-am').hidden=carePeriod!=='am';$('care-pm').hidden=carePeriod!=='pm';
+}
+function render(){if(!ready)return;renderToday();renderBag();renderAnalysis()}
+function openDb(){return new Promise((resolve,reject)=>{const q=indexedDB.open('asya-photos',1);q.onupgradeneeded=()=>q.result.createObjectStore('photos');q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)})}
+async function photoOp(mode,fn){const db=await openDb();return new Promise((resolve,reject)=>{const tx=db.transaction('photos',mode),q=fn(tx.objectStore('photos'));q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error);tx.oncomplete=()=>db.close()})}
+const photoPut=(id,blob)=>photoOp('readwrite',s=>s.put(blob,id)),photoGet=id=>photoOp('readonly',s=>s.get(id)),photoDelete=id=>photoOp('readwrite',s=>s.delete(id));
+async function photosExport(){const db=await openDb();const rows=await new Promise((resolve,reject)=>{const tx=db.transaction('photos','readonly'),store=tx.objectStore('photos'),keys=store.getAllKeys(),values=store.getAll();tx.oncomplete=()=>resolve(keys.result.map((key,i)=>[key,values.result[i]]));tx.onerror=()=>reject(tx.error)});db.close();const entries=await Promise.all(rows.map(([id,blob])=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve([id,reader.result]);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob)})));return Object.fromEntries(entries)}
+async function importPhotos(photos,overwrite=false){for(const [id,url] of Object.entries(photos||{})){if(typeof url!=='string'||!url.startsWith('data:image/'))continue;if(!overwrite&&await photoGet(id))continue;const r=await fetch(url);await photoPut(id,await r.blob())}}
+function download(j,name){const url=URL.createObjectURL(new Blob([JSON.stringify(j,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
+async function exportBackup(){const j={app:'asya-uhod',v:2,saved:new Date().toISOString(),data:C.snapshot(localStorage),photos:await photosExport()};download(j,'uhod-asya-'+app.today+'.json');localStorage.setItem('ananas:lastBackup',new Date().toISOString())}
+async function safety(){localStorage.setItem('asya2:safety:restore',JSON.stringify({app:'asya-uhod',v:2,saved:new Date().toISOString(),data:C.snapshot(localStorage),photos:await photosExport()}))}
+async function importBackup(j,mode){const incoming=C.validBackup(j),local=C.snapshot(localStorage);let cfg={};try{cfg=JSON.parse(local['ananas:cfg']||'{}')}catch(e){}const pristine=j.v===1&&!Object.keys(local).some(k=>/^ananas:\d{4}-/.test(k)||k.startsWith('ananas:diary:'))&&!local['ananas:prod']&&!Object.keys(cfg.steps||{}).length&&!(cfg.custom||[]).length&&!Object.keys(cfg.order||{}).length;const comparison={...local};if(pristine){delete comparison['ananas:cfg'];delete comparison['ananas:products']}const merged=C.mergeData(comparison,incoming);const chosen=mode||await chooseImport(merged.conflicts,Object.keys(incoming).length);if(!chosen)return false;if(app.migrationError&&chosen==='merge')throw Error('Локальные данные повреждены. Сначала скачай копию, затем выбери полную замену.');await safety();const data=chosen==='replace'?incoming:merged.data;if(chosen==='replace'){for(const k of Object.keys(local))if(!(k in data))localStorage.removeItem(k)}else if(pristine){localStorage.removeItem('ananas:cfg');localStorage.removeItem('ananas:products')}for(const [k,v] of Object.entries(data))localStorage.setItem(k,v);if(j.v===1)localStorage.removeItem('ananas:schemaVersion');if(j.photos)await importPhotos(j.photos,chosen==='replace');C.migrate(localStorage,app.DEF);app.clearMigrationError();app.reload();refreshSettings();alert('Данные восстановлены. Сохранена локальная копия состояния до восстановления.');return true}
+function chooseImport(conflicts,count){return new Promise(resolve=>{const dlg=document.createElement('dialog');dlg.className='import-dialog';dlg.innerHTML='<h2>Восстановление копии</h2><p>В копии '+count+' записей. Конфликтов: '+conflicts.length+'. При слиянии конфликтующие значения остаются на устройстве.'+(app.migrationError?' Локальные данные повреждены: для восстановления выбери полную замену.':'')+'</p><div class="conflict-list">'+(conflicts.length?conflicts.slice(0,100).map(x=>'<div>'+esc(x)+'</div>').join(''):'Совпадающих изменений нет.')+'</div><div class="btns"><button data-choice="merge" class="bk">Слить данные</button><button data-choice="replace" class="mini danger">Полностью заменить</button><button data-choice="cancel" class="reset">Отмена</button></div>';document.body.appendChild(dlg);dlg.showModal();dlg.addEventListener('click',e=>{const b=e.target.closest('[data-choice]');if(!b)return;const v=b.dataset.choice;if(v==='replace'&&!confirm('Полностью заменить данные на устройстве? Перед заменой будет создана резервная копия.'))return;dlg.close();dlg.remove();resolve(v==='cancel'?null:v)});dlg.addEventListener('cancel',()=>{dlg.remove();resolve(null)})})}
+window.Asya2={get ready(){return ready},init(bridge){app=bridge;mount();ready=true;if(app.migrationError){$('bk-status').textContent='Миграция остановлена: '+app.migrationError+'. Старые данные сохранены.'}render();setInterval(()=>{if(document.visibilityState==='visible')renderToday()},60000)},render,exportBackup,importBackup,photosExport,importPhotos,safety,getProducts,photoPut,photoGet};
+})();
