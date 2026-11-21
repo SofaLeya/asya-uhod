@@ -105,3 +105,17 @@ test('Yandex OAuth redirect is handled in the same window without retaining the 
   await page.reload();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('yds:asya-uhod') || '{}').tok)).toBe('fixture-token');
 });
+
+test('care data and photo survive closing and reopening a WebKit window', async ({page, context, browserName}) => {
+  test.skip(browserName !== 'webkit', 'Mobile WebKit project');
+  await page.goto('/');
+  await page.locator('#care-tabs [data-period=am]').click();
+  await page.locator('#am-wash').check();
+  await page.evaluate(async () => Asya2.photoPut('reopen-photo', new Blob([new Uint8Array([4, 5, 6])], {type:'image/png'})));
+  await page.close();
+  const reopened = await context.newPage();
+  await reopened.goto('/');
+  await reopened.locator('#care-tabs [data-period=am]').click();
+  await expect(reopened.locator('#am-wash')).toBeChecked();
+  expect(await reopened.evaluate(async () => !!(await Asya2.photoGet('reopen-photo')))).toBe(true);
+});
