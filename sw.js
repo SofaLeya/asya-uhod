@@ -1,5 +1,5 @@
 /* Only the application shell is cached. Storage and cloud responses are never touched. */
-const CACHE = 'asya-moonlight-v5-smart-bag';
+const CACHE = 'asya-moonlight-v6-photo-recognition';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'tgbk.js', 'ydsync.js', 'core.js', 'app.js', 'app2.js', 'smart-bag.js', 'gallery.js', 'smart-ui.js', 'vendor/ocr/tesseract.min.js', 'pwa.js', 'beauty.css', 'moonlight-decor.svg'];
 const FILES = new Set(SHELL.map(path => new URL(path, self.registration.scope).pathname));
 const OCR_PATH = new URL('vendor/ocr/', self.registration.scope).pathname;

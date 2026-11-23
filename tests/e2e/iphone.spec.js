@@ -134,7 +134,7 @@ test('PWA offers a waiting version, defers it, then updates without losing data 
     expect(await page.evaluate(async () => !!(await Asya2.photoGet('update-photo')))).toBe(true);
     expect(await page.evaluate(() => Array.from(document.querySelectorAll('#ol-am input[type=checkbox]')).some(x => x.id === 'am-wash' && x.checked))).toBe(true);
     const cacheNames = await page.evaluate(() => caches.keys());
-    expect(cacheNames).toContain('asya-moonlight-v5-smart-bag');
+    expect(cacheNames).toContain('asya-moonlight-v6-photo-recognition');
     expect(cacheNames).not.toContain('asya-moonlight-test-old');
     await page.waitForTimeout(600);
     expect(navigationCount).toBe(before + 1);
