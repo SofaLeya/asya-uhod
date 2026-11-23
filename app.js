@@ -548,7 +548,7 @@
     try{ if(window.YDS) YDS.init({app:"asya-uhod",title:"Уход Аси",cid:"02760b58a041462481b0b3fd09c33d7b",redir:"https://sofaleya.github.io/asya-uhod/",prefix:PREFIX,exclude:[PREFIX+"lastBackup"],accent:"#BFC2D5",accentText:"#fff"}); }catch(e){}
     try{ if(window.TGBK) TGBK.init({app:"asya-uhod",title:"Уход Аси",accent:"var(--accent)",accentText:"var(--bg)",
       file:d=>"uhod-asya-"+d+".json",
-      data:async()=>{ const data=collect(); return Object.keys(data).length? JSON.stringify({app:"asya-uhod",v:2,data,photos:await Asya2.photosExport()},null,1) : ""; }}); }catch(e){}
+      data:async()=>{ const data=collect(); if(!Object.keys(data).length)return '';const payload=JSON.stringify({app:'asya-uhod',v:2,data,photos:await Asya2.photosExport()});if(payload.length>24*1024*1024)throw Error('Копия больше 24 МБ. Уменьши фотографии.');return payload; }}); }catch(e){}
     $("bk-save").addEventListener("click",()=>Asya2.exportBackup());
     $("bk-file").addEventListener("change",async e=>{
       const f=e.target.files[0]; if(!f)return;

@@ -209,3 +209,31 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;background:ur
 .ios-install{padding:14px 16px}.ios-install h3{margin:0 0 6px;color:var(--accent);font-size:.95rem}.ios-install ol{margin:5px 0 9px;padding-left:22px;font-size:.84rem;line-height:1.55}.ios-install li::marker{color:var(--accent);font-weight:700}.ios-install p{margin:0}
 .pwa-update{position:fixed;z-index:30;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(69px + env(safe-area-inset-bottom,0px));max-width:680px;margin:auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;padding:12px 14px;border:1px solid var(--accent);border-radius:16px;background:var(--surface);color:var(--fg);box-shadow:var(--shadow);font-size:.87rem;font-weight:700}
 .pwa-update>div{display:flex;gap:7px}.pwa-update button{min-height:40px;padding:6px 12px}.pwa-update[hidden]{display:none}
+
+/* Smart cosmetics gallery and review-first OCR, with compact mobile controls. */
+.product-cover{width:64px;height:64px;padding:0;border:0;border-radius:12px;background:var(--accent-soft);cursor:pointer;overflow:hidden}
+.product-cover img{display:block}
+.expiry-info{display:flex;flex-direction:column;gap:2px;margin:7px 0;font-size:.73rem;color:var(--muted)}
+.expiry-info strong{color:var(--accent);font-size:.76rem}
+.photo-editor{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.photo-editor>strong{font-size:.85rem}.photo-editor #photo-count{font-size:.72rem;color:var(--muted)}
+.product-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:7px}
+.gallery-tile{min-width:0;padding:4px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.gallery-tile>button{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer}
+.gallery-tile img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px}
+.gallery-tile>span{display:block;margin:3px 0;font-size:.65rem;color:var(--muted);text-align:center}
+.gallery-controls{display:flex;justify-content:space-between;gap:1px}
+.gallery-controls button{width:25%;min-height:32px;padding:0;border:0;border-radius:5px;background:var(--accent-soft);color:var(--accent);cursor:pointer}
+.gallery-controls button:disabled{opacity:.35;cursor:default}
+#photo-message{margin:0;font-size:.75rem}
+.ocr-results{display:flex;flex-direction:column;gap:7px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:.8rem}
+.ocr-results[hidden]{display:none}.ocr-results h3{margin:0;font-size:.9rem}.ocr-results p{margin:0}
+.ocr-option{display:flex;gap:7px;padding:7px;border:1px solid var(--line);border-radius:8px}.ocr-option small{display:block;color:var(--muted)}
+#product-dialog{max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px);overscroll-behavior:contain}
+#product-dialog input,#product-dialog select{font-size:max(16px,1rem)}
+#product-form>.btns{position:sticky;bottom:0;z-index:1;padding:8px 0;background:var(--surface)}
+#photo-viewer{width:100vw;max-width:none;max-height:100dvh;height:100dvh;padding:0;border:0;border-radius:0;background:#17131e;display:none;place-items:center}
+#photo-viewer[open]{display:grid}#photo-viewer img{max-width:100vw;max-height:100dvh;object-fit:contain}
+#photo-viewer [data-close]{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;z-index:1;width:44px;height:44px;border:0;border-radius:50%;background:#27212f;color:#fff;font-size:1.7rem;cursor:pointer}
+
+@media(max-width:350px){.product-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}}
